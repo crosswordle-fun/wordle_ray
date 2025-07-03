@@ -66,6 +66,7 @@ typedef struct {
     int enter_pressed;
     int backspace_pressed;
     int letter_pressed;
+    int f11_pressed;
     char pressed_letter;
     double frame_time;
     int debug_mode;
@@ -125,9 +126,14 @@ GameState input_system(GameState state) {
     state.system.enter_pressed = (state.system.last_key_pressed == KEY_ENTER);
     state.system.backspace_pressed = (state.system.last_key_pressed == KEY_BACKSPACE);
     state.system.letter_pressed = (state.system.last_key_pressed >= KEY_A && state.system.last_key_pressed <= KEY_Z);
+    state.system.f11_pressed = IsKeyPressed(KEY_F11);
     state.system.pressed_letter = state.system.letter_pressed ? (char)state.system.last_key_pressed : 0;
     
     state.system.frame_time = GetFrameTime();
+    
+    if (state.system.f11_pressed) {
+        ToggleFullscreen();
+    }
     
     return state;
 }
