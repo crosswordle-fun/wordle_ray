@@ -319,19 +319,36 @@ void crossword_render_system(GameState state) {
             
             // Draw letter if present (only in word cells)
             if (is_word_cell) {
-                char letter = state.crossword.grid[x][y];
-                if (letter != '\0') {
-                    char letter_string[2] = {letter, '\0'};
+                char player_letter = state.crossword.grid[x][y];
+                char solution_letter = state.crossword.current_level.solution[x][y];
+                
+                char letter_to_display = '\0';
+                Color text_color = WORDLE_BLACK;
+                
+                if (player_letter != '\0') {
+                    // Priority 1: Show player-placed letter with validation colors
+                    letter_to_display = player_letter;
+                    
+                    // Text color based on cell background (green/red validation)
+                    if (cell_color.r == WORDLE_GREEN.r && cell_color.g == WORDLE_GREEN.g) {
+                        text_color = WORDLE_WHITE;  // White text on green background
+                    } else {
+                        text_color = WORDLE_BLACK;  // Black text on white/red background
+                    }
+                    
+                } else if (state.system.debug_mode && solution_letter != '\0') {
+                    // Priority 2: Show debug solution letter in light gray (only when no player letter)
+                    letter_to_display = solution_letter;
+                    text_color = (Color){180, 180, 180, 255};  // Light gray for debug
+                }
+                
+                // Draw the letter if we have one to display
+                if (letter_to_display != '\0') {
+                    char letter_string[2] = {letter_to_display, '\0'};
                     int font_size = (int)(cell_size * 0.6f);
                     int text_width = MeasureText(letter_string, font_size);
                     int text_x = cell_x + (cell_size - text_width) / 2;
                     int text_y = cell_y + (cell_size - font_size) / 2;
-                    
-                    // Text color based on cell background
-                    Color text_color = WORDLE_BLACK;
-                    if (cell_color.r == WORDLE_GREEN.r && cell_color.g == WORDLE_GREEN.g) {
-                        text_color = WORDLE_WHITE;  // White text on green background
-                    }
                     
                     DrawText(letter_string, text_x, text_y, font_size, text_color);
                 }
