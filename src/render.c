@@ -73,15 +73,8 @@ void board_render_system(GameState state) {
                 text_color = WORDLE_WHITE;
                 
             } else if (row == layout.current_input_row) {
-                // Current input row
-                if (state.core.play_state == GAME_STATE_SHOWING_RESULT) {
-                    // Show the result of the current guess with colors
-                    cell_color = get_color_for_letter_state(state.history.current_guess_states[col]);
-                    border_color = cell_color;
-                    border_width = 0;
-                    letter_to_display = state.history.current_guess[col];
-                    text_color = WORDLE_WHITE;
-                } else if (state.core.play_state == GAME_STATE_INPUT && col < state.input.current_letter_pos) {
+                // Current input row - only show current input since guesses are added to history immediately
+                if (state.core.play_state == GAME_STATE_INPUT && col < state.input.current_letter_pos) {
                     // Show current input
                     cell_color = WORDLE_INPUT;
                     border_color = WORDLE_DARK_GRAY;

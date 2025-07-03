@@ -66,21 +66,28 @@ GameState input_system(GameState state) {
         float scroll_amount = 0.0f;
         
         if (state.system.scroll_wheel_move > 0 || state.system.up_arrow_pressed) {
-            scroll_amount = 60.0f;  // Scroll up
+            scroll_amount = -60.0f;  // Scroll up (negative offset to see older guesses)
         } else if (state.system.scroll_wheel_move < 0 || state.system.down_arrow_pressed) {
-            scroll_amount = -60.0f;  // Scroll down
+            scroll_amount = 60.0f;  // Scroll down (positive offset toward current input)
         }
         
         state.system.camera_offset_y += scroll_amount;
         
-        // Limit scrolling - don't let camera go too far up or down
-        float max_scroll_up = 0.0f;  // Can't scroll above the first row
-        float max_scroll_down = -300.0f;  // Limit how far down we can scroll
+        // Calculate dynamic scroll bounds based on current game state
+        int total_rows = state.history.level_guess_count + 1;  // completed guesses + current input
+        float row_height = 70.0f;  // Approximate row height
         
-        if (state.system.camera_offset_y > max_scroll_up) {
+        // Allow scrolling up to see all previous guesses
+        float max_scroll_up = -(total_rows - 1) * row_height;  // Negative value to see oldest guess
+        
+        // Limit scrolling down - don't go past current input row
+        float max_scroll_down = 100.0f;  // Small positive offset below current input
+        
+        // Apply bounds
+        if (state.system.camera_offset_y < max_scroll_up) {
             state.system.camera_offset_y = max_scroll_up;
         }
-        if (state.system.camera_offset_y < max_scroll_down) {
+        if (state.system.camera_offset_y > max_scroll_down) {
             state.system.camera_offset_y = max_scroll_down;
         }
     }
@@ -181,22 +188,24 @@ GameState word_validation_system(GameState state) {
     state.core.total_lifetime_guesses++;
     state.stats.total_guesses++;
     
+    // Add this guess to level history immediately
+    if (state.history.level_guess_count < MAX_RECENT_GUESSES) {
+        strcpy(state.history.level_guesses[state.history.level_guess_count], state.input.current_word);
+        for (int i = 0; i < WORD_LENGTH; i++) {
+            state.history.level_letter_states[state.history.level_guess_count][i] = state.history.current_guess_states[i];
+        }
+        state.history.level_guess_count++;
+    }
+    
     // Check if level is complete
     if (check_word_match(state.input.current_word, state.core.target_word)) {
-        // Add this guess to level history before completing
-        if (state.history.level_guess_count < MAX_RECENT_GUESSES) {
-            strcpy(state.history.level_guesses[state.history.level_guess_count], state.input.current_word);
-            for (int i = 0; i < WORD_LENGTH; i++) {
-                state.history.level_letter_states[state.history.level_guess_count][i] = state.history.current_guess_states[i];
-            }
-            state.history.level_guess_count++;
-        }
-        
         state.core.level_complete = 1;
         state.core.play_state = GAME_STATE_LEVEL_COMPLETE;
     } else {
-        state.core.play_state = GAME_STATE_SHOWING_RESULT;
-        state.core.result_display_timer = RESULT_DISPLAY_TIME;
+        // Return to input state immediately for next guess
+        state.core.play_state = GAME_STATE_INPUT;
+        // Reset camera to center on new input row
+        state.system.target_camera_offset_y = 0.0f;
     }
     
     // Clear input for next guess
@@ -209,30 +218,8 @@ GameState word_validation_system(GameState state) {
 }
 
 GameState result_display_system(GameState state) {
-    if (state.core.play_state != GAME_STATE_SHOWING_RESULT) {
-        return state;
-    }
-    
-    // Count down the display timer
-    state.core.result_display_timer -= state.system.frame_time;
-    
-    // When timer expires, move guess to level history and switch back to input state
-    if (state.core.result_display_timer <= 0.0f) {
-        // Add the guess to level history
-        if (state.history.level_guess_count < MAX_RECENT_GUESSES) {
-            strcpy(state.history.level_guesses[state.history.level_guess_count], state.history.current_guess);
-            for (int i = 0; i < WORD_LENGTH; i++) {
-                state.history.level_letter_states[state.history.level_guess_count][i] = state.history.current_guess_states[i];
-            }
-            state.history.level_guess_count++;
-        }
-        
-        state.core.play_state = GAME_STATE_INPUT;
-        
-        // Reset camera to center on new input row
-        state.system.target_camera_offset_y = 0.0f;
-    }
-    
+    // This system is no longer needed since we process guesses instantly
+    // Keeping the function for compatibility but it does nothing
     return state;
 }
 
