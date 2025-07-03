@@ -148,7 +148,7 @@ void ui_render_system(GameState state) {
     DrawLine(line_margin, 90, layout.screen_width - line_margin, 90, WORDLE_BORDER);
     
     if (state.core.is_game_over) {
-        const char* end_message = state.core.player_won ? "🎉 You Won! 🎉" : "😔 Game Over";
+        const char* end_message = state.core.player_won ? "You Won!" : "Game Over";
         int end_font_size = (int)(layout.screen_width * 0.045f);
         if (end_font_size < 24) end_font_size = 24;
         if (end_font_size > 48) end_font_size = 48;
@@ -174,7 +174,7 @@ void ui_render_system(GameState state) {
             DrawText(target_message, target_x, target_y, target_font_size, WORDLE_WHITE);
         }
         
-        const char* restart_message = "Press SPACE to play again | F11 for fullscreen";
+        const char* restart_message = "Press SPACE to play again";
         int restart_font_size = (int)(layout.screen_width * 0.025f);
         if (restart_font_size < 16) restart_font_size = 16;
         if (restart_font_size > 24) restart_font_size = 24;
@@ -200,7 +200,7 @@ void ui_render_system(GameState state) {
         DrawText(stats_message, stats_x, stats_y, stats_font_size, WORDLE_BORDER);
         
     } else {
-        const char* instruction = "Type a 5-letter word and press ENTER | F11 for fullscreen";
+        const char* instruction = "Type a 5-letter word and press ENTER";
         int instruction_font_size = (int)(layout.screen_width * 0.022f);
         if (instruction_font_size < 16) instruction_font_size = 16;
         if (instruction_font_size > 22) instruction_font_size = 22;
