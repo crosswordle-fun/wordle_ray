@@ -16,24 +16,49 @@ typedef enum {
 } LetterState;
 
 typedef struct {
+    char target_word[WORD_LENGTH + 1];
+    int current_attempt;
+    int is_game_over;
+    int player_won;
+    int should_restart;
+} CoreGameState;
+
+typedef struct {
     char current_word[WORD_LENGTH + 1];
     int current_letter_pos;
     int word_complete;
     int should_submit;
-} WordEditingState;
+} PlayerInputState;
 
 typedef struct {
-    char target_word[WORD_LENGTH + 1];
-    int attempt_count;
     LetterState letter_states[MAX_ATTEMPTS][WORD_LENGTH];
     char all_guesses[MAX_ATTEMPTS][WORD_LENGTH + 1];
-} GameProgressState;
+    int attempt_count;
+} GameHistoryState;
 
 typedef struct {
-    int is_game_over;
-    int player_won;
-    int should_restart;
-} GameControlState;
+    int games_played;
+    int games_won;
+    int current_streak;
+    int max_streak;
+    int win_distribution[MAX_ATTEMPTS];
+    float win_percentage;
+} GameStatsState;
+
+typedef struct {
+    int sound_enabled;
+    int animations_enabled;
+    int hard_mode;
+    int color_blind_mode;
+} GameSettingsState;
+
+typedef struct {
+    float letter_reveal_timer;
+    float game_over_timer;
+    int show_statistics;
+    int show_help;
+    int animate_letters;
+} UIState;
 
 typedef struct {
     int last_key_pressed;
@@ -42,63 +67,91 @@ typedef struct {
     int backspace_pressed;
     int letter_pressed;
     char pressed_letter;
-} InputState;
+    double frame_time;
+    int debug_mode;
+} SystemState;
 
 typedef struct {
-    WordEditingState word_editing;
-    GameProgressState game_progress;
-    GameControlState game_control;
-    InputState input;
-} GameWorld;
+    CoreGameState core;
+    PlayerInputState input;
+    GameHistoryState history;
+    GameStatsState stats;
+    GameSettingsState settings;
+    UIState ui;
+    SystemState system;
+} GameState;
 
-GameWorld create_game_world(const char* target_word) {
-    GameWorld world = {0};
+GameState create_game_state(const char* target_word) {
+    GameState state = {0};
     
-    strcpy(world.game_progress.target_word, target_word);
-    world.game_progress.attempt_count = 0;
+    strcpy(state.core.target_word, target_word);
+    state.core.current_attempt = 0;
+    state.core.is_game_over = 0;
+    state.core.player_won = 0;
+    state.core.should_restart = 0;
     
-    world.word_editing.current_letter_pos = 0;
-    world.word_editing.word_complete = 0;
-    world.word_editing.should_submit = 0;
+    state.input.current_letter_pos = 0;
+    state.input.word_complete = 0;
+    state.input.should_submit = 0;
     
-    world.game_control.is_game_over = 0;
-    world.game_control.player_won = 0;
-    world.game_control.should_restart = 0;
+    state.history.attempt_count = 0;
     
-    return world;
+    state.stats.games_played = 0;
+    state.stats.games_won = 0;
+    state.stats.current_streak = 0;
+    state.stats.max_streak = 0;
+    state.stats.win_percentage = 0.0f;
+    
+    state.settings.sound_enabled = 1;
+    state.settings.animations_enabled = 1;
+    state.settings.hard_mode = 0;
+    state.settings.color_blind_mode = 0;
+    
+    state.ui.letter_reveal_timer = 0.0f;
+    state.ui.game_over_timer = 0.0f;
+    state.ui.show_statistics = 0;
+    state.ui.show_help = 0;
+    state.ui.animate_letters = 0;
+    
+    state.system.frame_time = 0.0;
+    state.system.debug_mode = 0;
+    
+    return state;
 }
 
-GameWorld input_system(GameWorld world) {
-    world.input.last_key_pressed = GetKeyPressed();
-    world.input.space_pressed = IsKeyPressed(KEY_SPACE);
-    world.input.enter_pressed = (world.input.last_key_pressed == KEY_ENTER);
-    world.input.backspace_pressed = (world.input.last_key_pressed == KEY_BACKSPACE);
-    world.input.letter_pressed = (world.input.last_key_pressed >= KEY_A && world.input.last_key_pressed <= KEY_Z);
-    world.input.pressed_letter = world.input.letter_pressed ? (char)world.input.last_key_pressed : 0;
+GameState input_system(GameState state) {
+    state.system.last_key_pressed = GetKeyPressed();
+    state.system.space_pressed = IsKeyPressed(KEY_SPACE);
+    state.system.enter_pressed = (state.system.last_key_pressed == KEY_ENTER);
+    state.system.backspace_pressed = (state.system.last_key_pressed == KEY_BACKSPACE);
+    state.system.letter_pressed = (state.system.last_key_pressed >= KEY_A && state.system.last_key_pressed <= KEY_Z);
+    state.system.pressed_letter = state.system.letter_pressed ? (char)state.system.last_key_pressed : 0;
     
-    return world;
+    state.system.frame_time = GetFrameTime();
+    
+    return state;
 }
 
-GameWorld word_editing_system(GameWorld world) {
-    if (world.game_control.is_game_over) {
-        return world;
+GameState word_editing_system(GameState state) {
+    if (state.core.is_game_over) {
+        return state;
     }
     
-    if (world.input.letter_pressed && world.word_editing.current_letter_pos < WORD_LENGTH) {
-        world.word_editing.current_word[world.word_editing.current_letter_pos] = toupper(world.input.pressed_letter);
-        world.word_editing.current_letter_pos++;
-        world.word_editing.current_word[world.word_editing.current_letter_pos] = '\0';
+    if (state.system.letter_pressed && state.input.current_letter_pos < WORD_LENGTH) {
+        state.input.current_word[state.input.current_letter_pos] = toupper(state.system.pressed_letter);
+        state.input.current_letter_pos++;
+        state.input.current_word[state.input.current_letter_pos] = '\0';
     }
     
-    if (world.input.backspace_pressed && world.word_editing.current_letter_pos > 0) {
-        world.word_editing.current_letter_pos--;
-        world.word_editing.current_word[world.word_editing.current_letter_pos] = '\0';
+    if (state.system.backspace_pressed && state.input.current_letter_pos > 0) {
+        state.input.current_letter_pos--;
+        state.input.current_word[state.input.current_letter_pos] = '\0';
     }
     
-    world.word_editing.word_complete = (world.word_editing.current_letter_pos == WORD_LENGTH);
-    world.word_editing.should_submit = (world.input.enter_pressed && world.word_editing.word_complete);
+    state.input.word_complete = (state.input.current_letter_pos == WORD_LENGTH);
+    state.input.should_submit = (state.system.enter_pressed && state.input.word_complete);
     
-    return world;
+    return state;
 }
 
 int is_letter_in_target_word(char letter, const char* target_word) {
@@ -124,61 +177,83 @@ int check_word_match(const char* word1, const char* word2) {
     return strcmp(word1, word2) == 0;
 }
 
-GameWorld word_validation_system(GameWorld world) {
-    if (!world.word_editing.should_submit) {
-        return world;
+GameState word_validation_system(GameState state) {
+    if (!state.input.should_submit) {
+        return state;
     }
     
-    int current_attempt = world.game_progress.attempt_count;
+    int current_attempt = state.history.attempt_count;
     
-    strcpy(world.game_progress.all_guesses[current_attempt], world.word_editing.current_word);
+    strcpy(state.history.all_guesses[current_attempt], state.input.current_word);
     
     for (int i = 0; i < WORD_LENGTH; i++) {
-        world.game_progress.letter_states[current_attempt][i] = 
+        state.history.letter_states[current_attempt][i] = 
             calculate_letter_state(
-                world.word_editing.current_word[i], 
+                state.input.current_word[i], 
                 i, 
-                world.game_progress.target_word
+                state.core.target_word
             );
     }
     
-    world.game_progress.attempt_count++;
+    state.history.attempt_count++;
+    state.core.current_attempt = state.history.attempt_count;
     
-    memset(world.word_editing.current_word, 0, sizeof(world.word_editing.current_word));
-    world.word_editing.current_letter_pos = 0;
-    world.word_editing.word_complete = 0;
-    world.word_editing.should_submit = 0;
+    memset(state.input.current_word, 0, sizeof(state.input.current_word));
+    state.input.current_letter_pos = 0;
+    state.input.word_complete = 0;
+    state.input.should_submit = 0;
     
-    return world;
+    return state;
 }
 
-GameWorld game_state_system(GameWorld world) {
-    if (world.game_control.is_game_over) {
-        return world;
+GameState game_state_system(GameState state) {
+    if (state.core.is_game_over) {
+        return state;
     }
     
-    if (world.game_progress.attempt_count > 0) {
-        int last_attempt = world.game_progress.attempt_count - 1;
-        if (check_word_match(world.game_progress.all_guesses[last_attempt], world.game_progress.target_word)) {
-            world.game_control.player_won = 1;
-            world.game_control.is_game_over = 1;
+    if (state.history.attempt_count > 0) {
+        int last_attempt = state.history.attempt_count - 1;
+        if (check_word_match(state.history.all_guesses[last_attempt], state.core.target_word)) {
+            state.core.player_won = 1;
+            state.core.is_game_over = 1;
         }
     }
     
-    if (world.game_progress.attempt_count >= MAX_ATTEMPTS) {
-        world.game_control.is_game_over = 1;
+    if (state.history.attempt_count >= MAX_ATTEMPTS) {
+        state.core.is_game_over = 1;
     }
     
-    return world;
+    return state;
 }
 
-GameWorld game_reset_system(GameWorld world, const char* new_target_word) {
-    if (world.game_control.is_game_over && world.input.space_pressed) {
-        world.game_control.should_restart = 1;
-        return create_game_world(new_target_word);
+GameState game_reset_system(GameState state, const char* new_target_word) {
+    if (state.core.is_game_over && state.system.space_pressed) {
+        state.core.should_restart = 1;
+        
+        GameStatsState preserved_stats = state.stats;
+        GameSettingsState preserved_settings = state.settings;
+        
+        state.stats.games_played++;
+        if (state.core.player_won) {
+            state.stats.games_won++;
+            state.stats.current_streak++;
+            if (state.stats.current_streak > state.stats.max_streak) {
+                state.stats.max_streak = state.stats.current_streak;
+            }
+            state.stats.win_distribution[state.history.attempt_count - 1]++;
+        } else {
+            state.stats.current_streak = 0;
+        }
+        
+        state.stats.win_percentage = (state.stats.games_played > 0) ? 
+            (float)state.stats.games_won / (float)state.stats.games_played * 100.0f : 0.0f;
+        
+        state = create_game_state(new_target_word);
+        state.stats = preserved_stats;
+        state.settings = preserved_settings;
     }
     
-    return world;
+    return state;
 }
 
 #endif

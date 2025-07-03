@@ -17,16 +17,16 @@ Color get_color_for_letter_state(LetterState state) {
     return WHITE;
 }
 
-void board_render_system(GameWorld world) {
+void board_render_system(GameState state) {
     for (int row = 0; row < MAX_ATTEMPTS; row++) {
         for (int col = 0; col < WORD_LENGTH; col++) {
             int cell_x = BOARD_START_X + col * (CELL_SIZE + CELL_SPACING);
             int cell_y = BOARD_START_Y + row * (CELL_SIZE + CELL_SPACING);
             
             Color cell_color = WHITE;
-            if (row < world.game_progress.attempt_count) {
-                cell_color = get_color_for_letter_state(world.game_progress.letter_states[row][col]);
-            } else if (row == world.game_progress.attempt_count && col < world.word_editing.current_letter_pos) {
+            if (row < state.history.attempt_count) {
+                cell_color = get_color_for_letter_state(state.history.letter_states[row][col]);
+            } else if (row == state.history.attempt_count && col < state.input.current_letter_pos) {
                 cell_color = LIGHTGRAY;
             }
             
@@ -34,10 +34,10 @@ void board_render_system(GameWorld world) {
             DrawRectangleLines(cell_x, cell_y, CELL_SIZE, CELL_SIZE, BLACK);
             
             char letter_to_display = '\0';
-            if (row < world.game_progress.attempt_count) {
-                letter_to_display = world.game_progress.all_guesses[row][col];
-            } else if (row == world.game_progress.attempt_count && col < world.word_editing.current_letter_pos) {
-                letter_to_display = world.word_editing.current_word[col];
+            if (row < state.history.attempt_count) {
+                letter_to_display = state.history.all_guesses[row][col];
+            } else if (row == state.history.attempt_count && col < state.input.current_letter_pos) {
+                letter_to_display = state.input.current_word[col];
             }
             
             if (letter_to_display != '\0') {
@@ -50,16 +50,16 @@ void board_render_system(GameWorld world) {
     }
 }
 
-void ui_render_system(GameWorld world) {
+void ui_render_system(GameState state) {
     DrawText("WORDLE", SCREEN_WIDTH/2 - 60, 20, 40, WHITE);
     
-    if (world.game_control.is_game_over) {
-        const char* end_message = world.game_control.player_won ? "You Won!" : "Game Over!";
+    if (state.core.is_game_over) {
+        const char* end_message = state.core.player_won ? "You Won!" : "Game Over!";
         DrawText(end_message, SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT - 150, 30, WHITE);
         
-        if (!world.game_control.player_won) {
+        if (!state.core.player_won) {
             char target_message[50];
-            sprintf(target_message, "The word was: %s", world.game_progress.target_word);
+            sprintf(target_message, "The word was: %s", state.core.target_word);
             DrawText(target_message, SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT - 100, 20, WHITE);
         }
         
@@ -69,27 +69,27 @@ void ui_render_system(GameWorld world) {
     }
 }
 
-void render_system(GameWorld world) {
+void render_system(GameState state) {
     ClearBackground(DARKGRAY);
-    board_render_system(world);
-    ui_render_system(world);
+    board_render_system(state);
+    ui_render_system(state);
 }
 
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Wordle");
     SetTargetFPS(60);
     
-    GameWorld world = create_game_world(get_random_word());
+    GameState state = create_game_state(get_random_word());
     
     while (!WindowShouldClose()) {
-        world = input_system(world);
-        world = word_editing_system(world);
-        world = word_validation_system(world);
-        world = game_state_system(world);
-        world = game_reset_system(world, get_random_word());
+        state = input_system(state);
+        state = word_editing_system(state);
+        state = word_validation_system(state);
+        state = game_state_system(state);
+        state = game_reset_system(state, get_random_word());
         
         BeginDrawing();
-        render_system(world);
+        render_system(state);
         EndDrawing();
     }
     
