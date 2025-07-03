@@ -1,8 +1,4 @@
-#ifndef WORDS_H
-#define WORDS_H
-
-#include <stdlib.h>
-#include <time.h>
+#include "systems.h"
 
 static const char* WORDLE_WORDS[] = {
     "ABOUT", "ABOVE", "ABUSE", "ACTOR", "ACUTE", "ADMIT", "ADOPT", "ADULT", "AFTER", "AGAIN",
@@ -29,7 +25,7 @@ static const char* WORDLE_WORDS[] = {
 
 #define TOTAL_WORDS (sizeof(WORDLE_WORDS) / sizeof(WORDLE_WORDS[0]))
 
-void initialize_random_seed() {
+void initialize_random_seed(void) {
     static int is_initialized = 0;
     if (!is_initialized) {
         srand(time(NULL));
@@ -37,10 +33,8 @@ void initialize_random_seed() {
     }
 }
 
-const char* get_random_word() {
+const char* get_random_word(void) {
     initialize_random_seed();
     int random_index = rand() % TOTAL_WORDS;
     return WORDLE_WORDS[random_index];
 }
-
-#endif

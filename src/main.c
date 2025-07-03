@@ -1,8 +1,4 @@
-#include "raylib.h"
-#include "words.h"
-#include "game.h"
-#include "constants.h"
-#include "render.h"
+#include "systems.h"
 
 int main(void) {
     InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT, "Wordle");

@@ -8,9 +8,12 @@ This is a Raylib-based C game project called "Wordle" - a complete implementatio
 ## Build System
 The project uses CMake with the following structure:
 - `CMakeLists.txt`: Main build configuration
-- `src/main.c`: Main game file containing rendering and game loop
-- `src/game.h`: Game state management and core logic
-- `src/words.h`: Word database and random selection
+- `src/main.c`: Entry point with main function and game loop
+- `src/systems.h`: Centralized header with all function declarations and structs
+- `src/constants.h`: Game constants and color definitions
+- `src/game.c`: Game logic system implementations
+- `src/render.c`: Rendering system implementations
+- `src/words.c`: Word database and selection implementations
 - `build/`: Generated build directory
 
 ## Common Commands
@@ -36,7 +39,7 @@ rm -rf build
 **Note**: The user handles all builds/rebuilds manually - Claude Code should not run build commands automatically.
 
 ## Architecture
-The game follows an Entity-Component-System (ECS) inspired architecture with distinct systems:
+The game follows an Entity-Component-System (ECS) inspired architecture with distinct systems and proper C project structure:
 
 ### Core Systems
 - **Input System**: Handles keyboard input (letters, backspace, enter, F11)

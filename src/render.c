@@ -1,23 +1,6 @@
-#ifndef RENDER_H
-#define RENDER_H
+#include "systems.h"
 
-#include "raylib.h"
-#include "game.h"
-#include "constants.h"
-#include <stdio.h>
-
-typedef struct {
-    int screen_width;
-    int screen_height;
-    int cell_size;
-    int cell_spacing;
-    int board_width;
-    int board_height;
-    int board_start_x;
-    int board_start_y;
-} LayoutConfig;
-
-LayoutConfig calculate_layout() {
+LayoutConfig calculate_layout(void) {
     LayoutConfig layout = {0};
     
     layout.screen_width = GetScreenWidth();
@@ -226,5 +209,3 @@ void render_system(GameState state) {
     board_render_system(state);
     ui_render_system(state);
 }
-
-#endif
