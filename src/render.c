@@ -1,6 +1,6 @@
 #include "systems.h"
 
-LayoutConfig calculate_layout(void) {
+LayoutConfig calculate_layout(GameState state) {
     LayoutConfig layout = {0};
     
     layout.screen_width = GetScreenWidth();
@@ -8,19 +8,28 @@ LayoutConfig calculate_layout(void) {
     
     int available_width = layout.screen_width - 100;
     
-    // For single row, we can use more generous cell sizing
+    // Calculate cell size based on available width
     layout.cell_size = available_width / (WORD_LENGTH + (WORD_LENGTH - 1) * CELL_SPACING_RATIO);
     
     if (layout.cell_size < MIN_CELL_SIZE) layout.cell_size = MIN_CELL_SIZE;
     if (layout.cell_size > MAX_CELL_SIZE) layout.cell_size = MAX_CELL_SIZE;
     
     layout.cell_spacing = (int)(layout.cell_size * CELL_SPACING_RATIO);
+    layout.row_height = layout.cell_size + layout.cell_spacing;
+    
+    // Calculate dynamic row count: completed guesses + 1 input row
+    layout.total_rows = state.history.level_guess_count + 1;
+    layout.current_input_row = state.history.level_guess_count;  // 0-indexed
     
     layout.board_width = WORD_LENGTH * layout.cell_size + (WORD_LENGTH - 1) * layout.cell_spacing;
-    layout.board_height = layout.cell_size;  // Single row only
+    layout.board_height = layout.total_rows * layout.row_height - layout.cell_spacing;  // Remove spacing after last row
     
     layout.board_start_x = (layout.screen_width - layout.board_width) / 2;
-    layout.board_start_y = (layout.screen_height - layout.cell_size) / 2;  // Center vertically
+    
+    // Calculate board_start_y with camera offset to center current input row
+    int input_row_y = layout.current_input_row * layout.row_height;
+    int desired_input_y = (layout.screen_height - layout.cell_size) / 2;  // Center of screen
+    layout.board_start_y = desired_input_y - input_row_y + (int)state.system.camera_offset_y;
     
     return layout;
 }
@@ -33,60 +42,77 @@ Color get_color_for_letter_state(LetterState state) {
 }
 
 void board_render_system(GameState state) {
-    LayoutConfig layout = calculate_layout();
+    LayoutConfig layout = calculate_layout(state);
     
-    // Single row display - shows either input or result
-    for (int col = 0; col < WORD_LENGTH; col++) {
-        int cell_x = layout.board_start_x + col * (layout.cell_size + layout.cell_spacing);
-        int cell_y = layout.board_start_y;
+    // Render all rows (completed guesses + current input row)
+    for (int row = 0; row < layout.total_rows; row++) {
+        int row_y = layout.board_start_y + row * layout.row_height;
         
-        Color cell_color = WORDLE_WHITE;
-        Color border_color = WORDLE_BORDER;
-        int border_width = 2;
-        char letter_to_display = '\0';
-        Color text_color = WORDLE_BLACK;
+        // Skip rendering rows that are off-screen (simple culling)
+        if (row_y + layout.cell_size < 0 || row_y > layout.screen_height) {
+            continue;
+        }
         
-        if (state.core.play_state == GAME_STATE_SHOWING_RESULT) {
-            // Show the result of the last guess with colors
-            if (col < WORD_LENGTH) {
-                cell_color = get_color_for_letter_state(state.history.current_guess_states[col]);
+        for (int col = 0; col < WORD_LENGTH; col++) {
+            int cell_x = layout.board_start_x + col * (layout.cell_size + layout.cell_spacing);
+            int cell_y = row_y;
+            
+            Color cell_color = WORDLE_WHITE;
+            Color border_color = WORDLE_BORDER;
+            int border_width = 2;
+            char letter_to_display = '\0';
+            Color text_color = WORDLE_BLACK;
+            
+            // Determine what to display based on row type
+            if (row < state.history.level_guess_count) {
+                // Completed guess row
+                cell_color = get_color_for_letter_state(state.history.level_letter_states[row][col]);
                 border_color = cell_color;
                 border_width = 0;
-                letter_to_display = state.history.current_guess[col];
+                letter_to_display = state.history.level_guesses[row][col];
                 text_color = WORDLE_WHITE;
+                
+            } else if (row == layout.current_input_row) {
+                // Current input row
+                if (state.core.play_state == GAME_STATE_SHOWING_RESULT) {
+                    // Show the result of the current guess with colors
+                    cell_color = get_color_for_letter_state(state.history.current_guess_states[col]);
+                    border_color = cell_color;
+                    border_width = 0;
+                    letter_to_display = state.history.current_guess[col];
+                    text_color = WORDLE_WHITE;
+                } else if (state.core.play_state == GAME_STATE_INPUT && col < state.input.current_letter_pos) {
+                    // Show current input
+                    cell_color = WORDLE_INPUT;
+                    border_color = WORDLE_DARK_GRAY;
+                    letter_to_display = state.input.current_word[col];
+                    text_color = WORDLE_WHITE;
+                }
             }
-        } else if (state.core.play_state == GAME_STATE_INPUT) {
-            // Show current input
-            if (col < state.input.current_letter_pos) {
-                cell_color = WORDLE_INPUT;
-                border_color = WORDLE_DARK_GRAY;
-                letter_to_display = state.input.current_word[col];
-                text_color = WORDLE_WHITE;
-            }
-        }
-        
-        // Draw the cell
-        DrawRectangle(cell_x, cell_y, layout.cell_size, layout.cell_size, cell_color);
-        
-        if (border_width > 0) {
-            DrawRectangleLinesEx((Rectangle){cell_x, cell_y, layout.cell_size, layout.cell_size}, border_width, border_color);
-        }
-        
-        // Draw the letter
-        if (letter_to_display != '\0') {
-            char letter_string[2] = {letter_to_display, '\0'};
-            int font_size = (int)(layout.cell_size * 0.45f);
-            int text_width = MeasureText(letter_string, font_size);
-            int text_x = cell_x + (layout.cell_size - text_width) / 2;
-            int text_y = cell_y + (layout.cell_size - font_size) / 2;
             
-            DrawText(letter_string, text_x, text_y, font_size, text_color);
+            // Draw the cell
+            DrawRectangle(cell_x, cell_y, layout.cell_size, layout.cell_size, cell_color);
+            
+            if (border_width > 0) {
+                DrawRectangleLinesEx((Rectangle){cell_x, cell_y, layout.cell_size, layout.cell_size}, border_width, border_color);
+            }
+            
+            // Draw the letter
+            if (letter_to_display != '\0') {
+                char letter_string[2] = {letter_to_display, '\0'};
+                int font_size = (int)(layout.cell_size * 0.45f);
+                int text_width = MeasureText(letter_string, font_size);
+                int text_x = cell_x + (layout.cell_size - text_width) / 2;
+                int text_y = cell_y + (layout.cell_size - font_size) / 2;
+                
+                DrawText(letter_string, text_x, text_y, font_size, text_color);
+            }
         }
     }
 }
 
 void ui_render_system(GameState state) {
-    LayoutConfig layout = calculate_layout();
+    LayoutConfig layout = calculate_layout(state);
     
     // Level title at top
     char level_title[50];

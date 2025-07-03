@@ -76,8 +76,19 @@ The game uses a comprehensive `GameState` struct containing:
 ### Game Mechanics
 - **Level Progression**: Complete a word → advance to next level
 - **No Attempt Limits**: Take as many guesses as needed per level
-- **Visual Flow**: Input → Submit → See colored result → Continue or advance
+- **Dynamic Expanding Grid**: Starts with 1 row, expands with each guess
+- **Camera Centering**: Always centers on current input row
+- **Scrollable History**: Use mouse wheel or arrow keys to scroll up/down
+- **Visual Flow**: Input → Submit → See colored result → Add to history → Continue
 - **Statistics**: Levels completed, best performance, lifetime averages
+
+### Controls
+- **Letter keys**: Type your guess
+- **Enter**: Submit completed 5-letter word
+- **Backspace**: Delete last letter
+- **Mouse wheel / Up/Down arrows**: Scroll through guess history
+- **Number keys 1-5**: Toggle debug mode and settings
+- **Space**: Continue to next level (when level is complete)
 
 ## Key Dependencies
 - Raylib 5.5 (automatically fetched if not found)

@@ -46,11 +46,11 @@ typedef struct {
 } PlayerInputState;
 
 typedef struct {
-    LetterState current_guess_states[WORD_LENGTH];
-    char current_guess[WORD_LENGTH + 1];
-    LetterState recent_letter_states[MAX_RECENT_GUESSES][WORD_LENGTH];
-    char recent_guesses[MAX_RECENT_GUESSES][WORD_LENGTH + 1];
-    int recent_guess_count;
+    LetterState level_letter_states[MAX_RECENT_GUESSES][WORD_LENGTH];
+    char level_guesses[MAX_RECENT_GUESSES][WORD_LENGTH + 1];
+    int level_guess_count;
+    LetterState current_guess_states[WORD_LENGTH];  // For result display state
+    char current_guess[WORD_LENGTH + 1];           // For result display state
 } GameHistoryState;
 
 typedef struct {
@@ -88,6 +88,11 @@ typedef struct {
     int debug_mode;
     int number_key_pressed;
     int pressed_number;
+    float camera_offset_y;
+    float target_camera_offset_y;
+    int scroll_wheel_move;
+    int up_arrow_pressed;
+    int down_arrow_pressed;
 } SystemState;
 
 typedef struct {
@@ -110,6 +115,9 @@ typedef struct {
     int board_height;
     int board_start_x;
     int board_start_y;
+    int total_rows;
+    int current_input_row;
+    int row_height;
 } LayoutConfig;
 
 // Game System Function Declarations
@@ -127,7 +135,7 @@ LetterState calculate_letter_state(char guess_letter, int position, const char* 
 int check_word_match(const char* word1, const char* word2);
 
 // Rendering System Function Declarations
-LayoutConfig calculate_layout(void);
+LayoutConfig calculate_layout(GameState state);
 Color get_color_for_letter_state(LetterState state);
 void board_render_system(GameState state);
 void ui_render_system(GameState state);
