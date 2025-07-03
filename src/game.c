@@ -151,7 +151,10 @@ GameState input_system(GameState state) {
                 state.stats.show_letter_bag = !state.stats.show_letter_bag;
                 break;
             case 3:
-                state.settings.animations_enabled = !state.settings.animations_enabled;
+                // Testing feature: Award 10 tokens of each letter
+                for (int i = 0; i < 26; i++) {
+                    state.stats.letter_counts[i] += 10;
+                }
                 break;
             case 4:
                 state.settings.hard_mode = !state.settings.hard_mode;

@@ -188,7 +188,7 @@ void ui_render_system(GameState state) {
         
         DrawText(instruction, instruction_x, instruction_y, instruction_font_size, WORDLE_BORDER);
         
-        const char* debug_instruction = "Press 1 for debug mode | 2 for letter bag | 3-5 for settings";
+        const char* debug_instruction = "Press 1 for debug mode | 2 for letter bag | 3 for test tokens | 4-5 for settings";
         int debug_instruction_font_size = (int)(layout.screen_width * 0.018f);
         if (debug_instruction_font_size < 12) debug_instruction_font_size = 12;
         if (debug_instruction_font_size > 16) debug_instruction_font_size = 16;
