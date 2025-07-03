@@ -33,6 +33,8 @@ make
 rm -rf build
 ```
 
+**Note**: The user handles all builds/rebuilds manually - Claude Code should not run build commands automatically.
+
 ## Architecture
 The game follows an Entity-Component-System (ECS) inspired architecture with distinct systems:
 
@@ -58,7 +60,6 @@ The game uses a comprehensive `GameState` struct containing:
 - Responsive layout that adapts to window resizing
 - Full Wordle color scheme (green, yellow, gray)
 - Game statistics tracking (games played, win rate, streaks)
-- Fullscreen support (F11 key)
 - Proper letter state calculation with position-aware logic
 - Debug mode with number key controls:
   - Press 1: Toggle debug mode (shows target word)
