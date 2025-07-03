@@ -250,6 +250,24 @@ GameState word_validation_system(GameState state) {
         int letter_array_index = awarded_letter - 'A';  // Convert A-Z to 0-25
         state.stats.letter_counts[letter_array_index]++;
         
+        // Update statistics (only happens once per level completion)
+        state.stats.levels_completed++;
+        state.stats.current_level_streak++;
+        if (state.stats.current_level_streak > state.stats.max_level_streak) {
+            state.stats.max_level_streak = state.stats.current_level_streak;
+        }
+        
+        // Update best score if this level was solved with fewer guesses
+        if (state.core.guesses_this_level < state.stats.best_level_score) {
+            state.stats.best_level_score = state.core.guesses_this_level;
+        }
+        
+        // Calculate average guesses per level
+        if (state.stats.levels_completed > 0) {
+            state.stats.average_guesses_per_level = 
+                (float)state.stats.total_guesses / (float)state.stats.levels_completed;
+        }
+        
         state.core.level_complete = 1;
         state.core.play_state = GAME_STATE_LEVEL_COMPLETE;
     } else {
@@ -281,23 +299,6 @@ GameState level_progression_system(GameState state) {
         return state;
     }
     
-    // Update statistics
-    state.stats.levels_completed++;
-    state.stats.current_level_streak++;
-    if (state.stats.current_level_streak > state.stats.max_level_streak) {
-        state.stats.max_level_streak = state.stats.current_level_streak;
-    }
-    
-    // Update best score if this level was solved with fewer guesses
-    if (state.core.guesses_this_level < state.stats.best_level_score) {
-        state.stats.best_level_score = state.core.guesses_this_level;
-    }
-    
-    // Calculate average guesses per level
-    if (state.stats.levels_completed > 0) {
-        state.stats.average_guesses_per_level = 
-            (float)state.stats.total_guesses / (float)state.stats.levels_completed;
-    }
     
     
     // Wait for space to continue to next level
