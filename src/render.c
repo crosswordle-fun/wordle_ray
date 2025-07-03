@@ -352,12 +352,24 @@ void crossword_render_system(GameState state) {
                     
                     DrawText(letter_string, text_x, text_y, font_size, text_color);
                 }
+                
+                // Draw directional arrow indicator on cursor position
+                if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
+                    const char* arrow = (state.crossword.cursor_direction == 0) ? "→" : "↓";
+                    int arrow_font_size = (int)(cell_size * 0.3f);
+                    
+                    // Position arrow in bottom-right corner of cell
+                    int arrow_x = cell_x + cell_size - 15;
+                    int arrow_y = cell_y + cell_size - 15;
+                    
+                    DrawText(arrow, arrow_x, arrow_y, arrow_font_size, WORDLE_WHITE);
+                }
             }
         }
     }
     
     // Instructions
-    const char* instructions = "Use arrows to move cursor | Letter keys to place tokens | Backspace to remove | Tab to return to Wordle";
+    const char* instructions = "Arrows: move cursor | Letters: type continuously | Shift: toggle direction | Backspace: delete backwards | Tab: return to Wordle";
     int inst_font_size = 16;
     int inst_width = MeasureText(instructions, inst_font_size);
     int inst_x = (screen_width - inst_width) / 2;

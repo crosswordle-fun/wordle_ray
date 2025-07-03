@@ -89,6 +89,7 @@ typedef struct {
     char grid[9][9];        // 9x9 grid of placed letters ('\0' = empty)
     int cursor_x;           // Current cursor position X (0-8)
     int cursor_y;           // Current cursor position Y (0-8)
+    int cursor_direction;   // 0=horizontal (right), 1=vertical (down)
     CrosswordLevel current_level; // Current puzzle data
 } CrosswordState;
 
@@ -111,6 +112,7 @@ typedef struct {
     int user_has_scrolled;
     int auto_center_paused;
     int tab_pressed;
+    int shift_pressed;
 } SystemState;
 
 typedef struct {
