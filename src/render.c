@@ -247,8 +247,106 @@ void ui_render_system(GameState state) {
     }
 }
 
+void crossword_render_system(GameState state) {
+    // Title
+    const char* title = "CROSSWORD";
+    int title_font_size = 48;
+    int title_width = MeasureText(title, title_font_size);
+    int title_x = (GetScreenWidth() - title_width) / 2;
+    int title_y = 40;
+    DrawText(title, title_x, title_y, title_font_size, WORDLE_WHITE);
+    
+    // Calculate grid layout
+    int grid_size = 9;
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
+    int available_size = (screen_width < screen_height - 200) ? screen_width - 100 : screen_height - 300;
+    int cell_size = available_size / grid_size;
+    if (cell_size > 60) cell_size = 60;
+    if (cell_size < 30) cell_size = 30;
+    
+    int grid_width = grid_size * cell_size;
+    int grid_height = grid_size * cell_size;
+    int grid_start_x = (screen_width - grid_width) / 2;
+    int grid_start_y = title_y + 80;
+    
+    // Draw grid
+    for (int x = 0; x < grid_size; x++) {
+        for (int y = 0; y < grid_size; y++) {
+            int cell_x = grid_start_x + x * cell_size;
+            int cell_y = grid_start_y + y * cell_size;
+            
+            Color cell_color = WORDLE_WHITE;
+            Color border_color = WORDLE_BORDER;
+            int border_width = 2;
+            
+            // Highlight cursor position
+            if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
+                cell_color = WORDLE_YELLOW;
+                border_color = WORDLE_WHITE;
+                border_width = 3;
+            }
+            
+            // Draw cell
+            DrawRectangle(cell_x, cell_y, cell_size, cell_size, cell_color);
+            DrawRectangleLinesEx((Rectangle){cell_x, cell_y, cell_size, cell_size}, border_width, border_color);
+            
+            // Draw letter if present
+            char letter = state.crossword.grid[x][y];
+            if (letter != '\0') {
+                char letter_string[2] = {letter, '\0'};
+                int font_size = (int)(cell_size * 0.6f);
+                int text_width = MeasureText(letter_string, font_size);
+                int text_x = cell_x + (cell_size - text_width) / 2;
+                int text_y = cell_y + (cell_size - font_size) / 2;
+                
+                Color text_color = (x == state.crossword.cursor_x && y == state.crossword.cursor_y) ? WORDLE_BLACK : WORDLE_BLACK;
+                DrawText(letter_string, text_x, text_y, font_size, text_color);
+            }
+        }
+    }
+    
+    // Instructions
+    const char* instructions = "Use arrows to move cursor | Letter keys to place tokens | Backspace to remove | Tab to return to Wordle";
+    int inst_font_size = 16;
+    int inst_width = MeasureText(instructions, inst_font_size);
+    int inst_x = (screen_width - inst_width) / 2;
+    int inst_y = grid_start_y + grid_height + 30;
+    DrawText(instructions, inst_x, inst_y, inst_font_size, WORDLE_GRAY);
+    
+    // Letter bag display
+    if (state.stats.show_letter_bag) {
+        char letter_bag_text[300] = "Available Letters: ";
+        int bag_start_len = strlen(letter_bag_text);
+        
+        for (int i = 0; i < 26; i++) {
+            if (state.stats.letter_counts[i] > 0) {
+                char letter_entry[10];
+                sprintf(letter_entry, "%c:%d ", 'A' + i, state.stats.letter_counts[i]);
+                strcat(letter_bag_text, letter_entry);
+            }
+        }
+        
+        if (strlen(letter_bag_text) == bag_start_len) {
+            strcat(letter_bag_text, "None - play Wordle to earn letters!");
+        }
+        
+        int bag_font_size = 14;
+        int bag_width = MeasureText(letter_bag_text, bag_font_size);
+        int bag_x = (screen_width - bag_width) / 2;
+        int bag_y = inst_y + 30;
+        
+        DrawText(letter_bag_text, bag_x, bag_y, bag_font_size, WORDLE_YELLOW);
+    }
+}
+
 void render_system(GameState state) {
     ClearBackground(WORDLE_BG);
-    board_render_system(state);
-    ui_render_system(state);
+    
+    if (state.current_view == VIEW_WORDLE) {
+        board_render_system(state);
+        ui_render_system(state);
+    } else if (state.current_view == VIEW_CROSSWORD) {
+        crossword_render_system(state);
+    }
 }

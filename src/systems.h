@@ -16,6 +16,8 @@ GameState word_validation_system(GameState state);
 GameState level_progression_system(GameState state);
 GameState result_display_system(GameState state);
 GameState new_level_system(GameState state);
+GameState view_switching_system(GameState state);
+GameState crossword_input_system(GameState state);
 
 // Game Logic Helper Function Declarations
 int is_letter_in_target_word(char letter, const char* target_word);
@@ -28,6 +30,7 @@ Color get_color_for_letter_state(LetterState state);
 void board_render_system(GameState state);
 void ui_render_system(GameState state);
 void render_system(GameState state);
+void crossword_render_system(GameState state);
 
 // Word System Function Declarations
 void initialize_random_seed(void);

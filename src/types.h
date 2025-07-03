@@ -22,6 +22,11 @@ typedef enum {
     GAME_STATE_INPUT_READY = 3
 } GamePlayState;
 
+typedef enum {
+    VIEW_WORDLE = 0,
+    VIEW_CROSSWORD = 1
+} GameViewState;
+
 // Game State Structs
 typedef struct {
     char target_word[WORD_LENGTH + 1];
@@ -75,6 +80,12 @@ typedef struct {
 } UIState;
 
 typedef struct {
+    char grid[9][9];        // 9x9 grid of placed letters ('\0' = empty)
+    int cursor_x;           // Current cursor position X (0-8)
+    int cursor_y;           // Current cursor position Y (0-8)
+} CrosswordState;
+
+typedef struct {
     int last_key_pressed;
     int space_pressed;
     int enter_pressed;
@@ -92,6 +103,7 @@ typedef struct {
     int down_arrow_pressed;
     int user_has_scrolled;
     int auto_center_paused;
+    int tab_pressed;
 } SystemState;
 
 typedef struct {
@@ -102,6 +114,8 @@ typedef struct {
     GameSettingsState settings;
     UIState ui;
     SystemState system;
+    GameViewState current_view;
+    CrosswordState crossword;
 } GameState;
 
 // Rendering Structs

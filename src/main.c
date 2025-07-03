@@ -10,15 +10,21 @@ int main(void) {
     
     while (!WindowShouldClose()) {
         state = input_system(state);
-        state = word_editing_system(state);
-        state = word_validation_system(state);
-        state = result_display_system(state);
-        state = level_progression_system(state);
+        state = view_switching_system(state);
         
-        // Handle new level setup
-        if (state.core.play_state == GAME_STATE_INPUT_READY) {
-            strcpy(state.core.target_word, get_random_word());
-            state = new_level_system(state);
+        if (state.current_view == VIEW_WORDLE) {
+            state = word_editing_system(state);
+            state = word_validation_system(state);
+            state = result_display_system(state);
+            state = level_progression_system(state);
+            
+            // Handle new level setup
+            if (state.core.play_state == GAME_STATE_INPUT_READY) {
+                strcpy(state.core.target_word, get_random_word());
+                state = new_level_system(state);
+            }
+        } else if (state.current_view == VIEW_CROSSWORD) {
+            state = crossword_input_system(state);
         }
         
         BeginDrawing();

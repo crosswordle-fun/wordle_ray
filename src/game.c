@@ -48,6 +48,17 @@ GameState create_game_state(const char* target_word) {
     state.system.user_has_scrolled = 0;
     state.system.auto_center_paused = 0;
     
+    state.current_view = VIEW_WORDLE;
+    
+    // Initialize crossword grid to empty
+    for (int x = 0; x < 9; x++) {
+        for (int y = 0; y < 9; y++) {
+            state.crossword.grid[x][y] = '\0';
+        }
+    }
+    state.crossword.cursor_x = 0;
+    state.crossword.cursor_y = 0;
+    
     return state;
 }
 
@@ -66,11 +77,12 @@ GameState input_system(GameState state) {
     state.system.scroll_wheel_move = (int)GetMouseWheelMove();
     state.system.up_arrow_pressed = IsKeyPressed(KEY_UP);
     state.system.down_arrow_pressed = IsKeyPressed(KEY_DOWN);
+    state.system.tab_pressed = IsKeyPressed(KEY_TAB);
     
     state.system.frame_time = GetFrameTime();
     
-    // Handle scrolling
-    if (state.system.scroll_wheel_move != 0 || state.system.up_arrow_pressed || state.system.down_arrow_pressed) {
+    // Handle scrolling (only in Wordle view)
+    if ((state.system.scroll_wheel_move != 0 || state.system.up_arrow_pressed || state.system.down_arrow_pressed) && state.current_view == VIEW_WORDLE) {
         float scroll_amount = 0.0f;
         
         if (state.system.scroll_wheel_move > 0 || state.system.up_arrow_pressed) {
@@ -304,6 +316,69 @@ GameState level_progression_system(GameState state) {
     // Wait for space to continue to next level
     if (state.system.space_pressed) {
         state.core.play_state = GAME_STATE_INPUT_READY;
+    }
+    
+    return state;
+}
+
+GameState view_switching_system(GameState state) {
+    if (state.system.tab_pressed) {
+        if (state.current_view == VIEW_WORDLE) {
+            state.current_view = VIEW_CROSSWORD;
+        } else {
+            state.current_view = VIEW_WORDLE;
+        }
+    }
+    return state;
+}
+
+GameState crossword_input_system(GameState state) {
+    if (state.current_view != VIEW_CROSSWORD) {
+        return state;
+    }
+    
+    // Arrow key navigation
+    if (state.system.up_arrow_pressed && state.crossword.cursor_y > 0) {
+        state.crossword.cursor_y--;
+    }
+    if (state.system.down_arrow_pressed && state.crossword.cursor_y < 8) {
+        state.crossword.cursor_y++;
+    }
+    if (IsKeyPressed(KEY_LEFT) && state.crossword.cursor_x > 0) {
+        state.crossword.cursor_x--;
+    }
+    if (IsKeyPressed(KEY_RIGHT) && state.crossword.cursor_x < 8) {
+        state.crossword.cursor_x++;
+    }
+    
+    // Letter placement
+    if (state.system.letter_pressed) {
+        char letter = state.system.pressed_letter;
+        int letter_index = letter - 'A';
+        
+        // Check if player has this letter token
+        if (state.stats.letter_counts[letter_index] > 0) {
+            // Remove any existing letter at cursor position and return it to bag
+            char existing_letter = state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y];
+            if (existing_letter != '\0') {
+                int existing_index = existing_letter - 'A';
+                state.stats.letter_counts[existing_index]++;
+            }
+            
+            // Place new letter and remove from bag
+            state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = letter;
+            state.stats.letter_counts[letter_index]--;
+        }
+    }
+    
+    // Letter removal
+    if (state.system.backspace_pressed) {
+        char existing_letter = state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y];
+        if (existing_letter != '\0') {
+            int existing_index = existing_letter - 'A';
+            state.stats.letter_counts[existing_index]++;
+            state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = '\0';
+        }
     }
     
     return state;
