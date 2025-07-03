@@ -68,32 +68,43 @@ GameState input_system(GameState state) {
         float scroll_amount = 0.0f;
         
         if (state.system.scroll_wheel_move > 0 || state.system.up_arrow_pressed) {
-            scroll_amount = -60.0f;  // Scroll up (negative offset to see older guesses)
+            scroll_amount = 60.0f;  // Scroll up (positive offset to see older guesses)
         } else if (state.system.scroll_wheel_move < 0 || state.system.down_arrow_pressed) {
-            scroll_amount = 60.0f;  // Scroll down (positive offset toward current input)
+            scroll_amount = -60.0f;  // Scroll down (negative offset toward current input)
         }
         
         state.system.camera_offset_y += scroll_amount;
         
         // Calculate dynamic scroll bounds based on current game state
         int total_rows = state.history.level_guess_count + 1;  // completed guesses + current input
-        float row_height = 70.0f;  // Approximate row height
         int screen_height = GetScreenHeight();
         
-        // Allow scrolling up until attempt 1 (row 0) is centered on screen
-        // When row 0 is centered: board_start_y + 0 * row_height = screen_height/2 - cell_size/2
-        // Solving for camera_offset_y: camera_offset_y = (screen_height/2 - cell_size/2) - (desired_input_y - input_row_y)
-        float max_scroll_up = -(state.history.level_guess_count * row_height);  // Centers first attempt
+        // Use actual row height from layout calculation
+        int available_width = GetScreenWidth() - 100;
+        int cell_size = available_width / (WORD_LENGTH + (WORD_LENGTH - 1) * 0.12f);
+        if (cell_size < 50) cell_size = 50;
+        if (cell_size > 100) cell_size = 100;
+        int cell_spacing = (int)(cell_size * 0.12f);
+        int actual_row_height = cell_size + cell_spacing;
+        
+        // To center attempt 1 (row 0):
+        // We want: board_start_y + 0 * row_height = screen_height/2 - cell_size/2
+        // From calculate_layout: board_start_y = desired_input_y - input_row_y + camera_offset_y
+        // Where: desired_input_y = screen_height/2 - cell_size/2 (center of screen)
+        // And: input_row_y = current_input_row * row_height
+        // So: camera_offset_y = (screen_height/2 - cell_size/2) - (desired_input_y - input_row_y)
+        // Simplifying: camera_offset_y = input_row_y = level_guess_count * row_height
+        float max_scroll_up = state.history.level_guess_count * actual_row_height;
         
         // Allow scrolling down until input row is centered on screen
-        // When input row is centered, camera_offset_y should be 0 (this is the natural center position)
-        float max_scroll_down = 0.0f;  // Input row centered is the natural state
+        // Input row centered is the natural state (camera_offset_y = 0)
+        float max_scroll_down = 0.0f;
         
         // Apply bounds
-        if (state.system.camera_offset_y < max_scroll_up) {
+        if (state.system.camera_offset_y > max_scroll_up) {
             state.system.camera_offset_y = max_scroll_up;
         }
-        if (state.system.camera_offset_y > max_scroll_down) {
+        if (state.system.camera_offset_y < max_scroll_down) {
             state.system.camera_offset_y = max_scroll_down;
         }
         
