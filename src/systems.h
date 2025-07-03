@@ -93,6 +93,8 @@ typedef struct {
     int scroll_wheel_move;
     int up_arrow_pressed;
     int down_arrow_pressed;
+    int user_has_scrolled;
+    int auto_center_paused;
 } SystemState;
 
 typedef struct {

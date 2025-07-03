@@ -39,6 +39,8 @@ GameState create_game_state(const char* target_word) {
     state.system.debug_mode = 0;
     state.system.camera_offset_y = 0.0f;
     state.system.target_camera_offset_y = 0.0f;
+    state.system.user_has_scrolled = 0;
+    state.system.auto_center_paused = 0;
     
     return state;
 }
@@ -90,11 +92,19 @@ GameState input_system(GameState state) {
         if (state.system.camera_offset_y > max_scroll_down) {
             state.system.camera_offset_y = max_scroll_down;
         }
+        
+        // User has manually scrolled - pause auto-centering
+        state.system.user_has_scrolled = 1;
+        state.system.auto_center_paused = 1;
+        // Set target to current position to prevent camera interpolation from fighting
+        state.system.target_camera_offset_y = state.system.camera_offset_y;
     }
     
-    // Smooth camera interpolation toward target
-    float camera_lerp_speed = 8.0f;
-    state.system.camera_offset_y += (state.system.target_camera_offset_y - state.system.camera_offset_y) * camera_lerp_speed * state.system.frame_time;
+    // Smooth camera interpolation toward target (only when not paused)
+    if (!state.system.auto_center_paused) {
+        float camera_lerp_speed = 8.0f;
+        state.system.camera_offset_y += (state.system.target_camera_offset_y - state.system.camera_offset_y) * camera_lerp_speed * state.system.frame_time;
+    }
     
     if (state.system.number_key_pressed) {
         switch (state.system.pressed_number) {
@@ -129,11 +139,25 @@ GameState word_editing_system(GameState state) {
         state.input.current_word[state.input.current_letter_pos] = toupper(state.system.pressed_letter);
         state.input.current_letter_pos++;
         state.input.current_word[state.input.current_letter_pos] = '\0';
+        
+        // User started typing - reactivate auto-centering
+        if (state.system.user_has_scrolled) {
+            state.system.auto_center_paused = 0;
+            state.system.user_has_scrolled = 0;
+            state.system.target_camera_offset_y = 0.0f;  // Center on current input
+        }
     }
     
     if (state.system.backspace_pressed && state.input.current_letter_pos > 0) {
         state.input.current_letter_pos--;
         state.input.current_word[state.input.current_letter_pos] = '\0';
+        
+        // User started typing (backspace counts as typing) - reactivate auto-centering
+        if (state.system.user_has_scrolled) {
+            state.system.auto_center_paused = 0;
+            state.system.user_has_scrolled = 0;
+            state.system.target_camera_offset_y = 0.0f;  // Center on current input
+        }
     }
     
     state.input.word_complete = (state.input.current_letter_pos == WORD_LENGTH);
@@ -204,8 +228,10 @@ GameState word_validation_system(GameState state) {
     } else {
         // Return to input state immediately for next guess
         state.core.play_state = GAME_STATE_INPUT;
-        // Reset camera to center on new input row
-        state.system.target_camera_offset_y = 0.0f;
+        // Reset camera to center on new input row (only if not paused)
+        if (!state.system.auto_center_paused) {
+            state.system.target_camera_offset_y = 0.0f;
+        }
     }
     
     // Clear input for next guess
