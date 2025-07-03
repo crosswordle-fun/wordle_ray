@@ -11,7 +11,6 @@
 
 // Game Constants
 #define WORD_LENGTH 5
-#define MAX_ATTEMPTS 6
 
 // Enums
 typedef enum {
@@ -21,13 +20,22 @@ typedef enum {
     LETTER_NOT_IN_WORD = 3
 } LetterState;
 
+typedef enum {
+    GAME_STATE_INPUT = 0,
+    GAME_STATE_SHOWING_RESULT = 1,
+    GAME_STATE_LEVEL_COMPLETE = 2,
+    GAME_STATE_INPUT_READY = 3
+} GamePlayState;
+
 // Game State Structs
 typedef struct {
     char target_word[WORD_LENGTH + 1];
-    int current_attempt;
-    int is_game_over;
-    int player_won;
-    int should_restart;
+    int current_level;
+    int guesses_this_level;
+    int total_lifetime_guesses;
+    GamePlayState play_state;
+    float result_display_timer;
+    int level_complete;
 } CoreGameState;
 
 typedef struct {
@@ -38,18 +46,20 @@ typedef struct {
 } PlayerInputState;
 
 typedef struct {
-    LetterState letter_states[MAX_ATTEMPTS][WORD_LENGTH];
-    char all_guesses[MAX_ATTEMPTS][WORD_LENGTH + 1];
-    int attempt_count;
+    LetterState current_guess_states[WORD_LENGTH];
+    char current_guess[WORD_LENGTH + 1];
+    LetterState recent_letter_states[MAX_RECENT_GUESSES][WORD_LENGTH];
+    char recent_guesses[MAX_RECENT_GUESSES][WORD_LENGTH + 1];
+    int recent_guess_count;
 } GameHistoryState;
 
 typedef struct {
-    int games_played;
-    int games_won;
-    int current_streak;
-    int max_streak;
-    int win_distribution[MAX_ATTEMPTS];
-    float win_percentage;
+    int levels_completed;
+    int current_level_streak;
+    int max_level_streak;
+    int total_guesses;
+    float average_guesses_per_level;
+    int best_level_score;  // minimum guesses for any level
 } GameStatsState;
 
 typedef struct {
@@ -107,8 +117,9 @@ GameState create_game_state(const char* target_word);
 GameState input_system(GameState state);
 GameState word_editing_system(GameState state);
 GameState word_validation_system(GameState state);
-GameState game_state_system(GameState state);
-GameState game_reset_system(GameState state, const char* new_target_word);
+GameState level_progression_system(GameState state);
+GameState result_display_system(GameState state);
+GameState new_level_system(GameState state);
 
 // Game Logic Helper Function Declarations
 int is_letter_in_target_word(char letter, const char* target_word);

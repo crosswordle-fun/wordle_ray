@@ -4,22 +4,25 @@ GameState create_game_state(const char* target_word) {
     GameState state = {0};
     
     strcpy(state.core.target_word, target_word);
-    state.core.current_attempt = 0;
-    state.core.is_game_over = 0;
-    state.core.player_won = 0;
-    state.core.should_restart = 0;
+    state.core.current_level = 1;
+    state.core.guesses_this_level = 0;
+    state.core.total_lifetime_guesses = 0;
+    state.core.play_state = GAME_STATE_INPUT;
+    state.core.result_display_timer = 0.0f;
+    state.core.level_complete = 0;
     
     state.input.current_letter_pos = 0;
     state.input.word_complete = 0;
     state.input.should_submit = 0;
     
-    state.history.attempt_count = 0;
+    state.history.recent_guess_count = 0;
     
-    state.stats.games_played = 0;
-    state.stats.games_won = 0;
-    state.stats.current_streak = 0;
-    state.stats.max_streak = 0;
-    state.stats.win_percentage = 0.0f;
+    state.stats.levels_completed = 0;
+    state.stats.current_level_streak = 1;
+    state.stats.max_level_streak = 1;
+    state.stats.total_guesses = 0;
+    state.stats.average_guesses_per_level = 0.0f;
+    state.stats.best_level_score = 999;  // Initialize to high number
     
     state.settings.sound_enabled = 1;
     state.settings.animations_enabled = 1;
@@ -75,7 +78,8 @@ GameState input_system(GameState state) {
 }
 
 GameState word_editing_system(GameState state) {
-    if (state.core.is_game_over) {
+    // Only allow input when in INPUT state
+    if (state.core.play_state != GAME_STATE_INPUT) {
         return state;
     }
     
@@ -120,16 +124,16 @@ int check_word_match(const char* word1, const char* word2) {
 }
 
 GameState word_validation_system(GameState state) {
-    if (!state.input.should_submit) {
+    if (!state.input.should_submit || state.core.play_state != GAME_STATE_INPUT) {
         return state;
     }
     
-    int current_attempt = state.history.attempt_count;
+    // Store the current guess
+    strcpy(state.history.current_guess, state.input.current_word);
     
-    strcpy(state.history.all_guesses[current_attempt], state.input.current_word);
-    
+    // Calculate letter states for the current guess
     for (int i = 0; i < WORD_LENGTH; i++) {
-        state.history.letter_states[current_attempt][i] = 
+        state.history.current_guess_states[i] = 
             calculate_letter_state(
                 state.input.current_word[i], 
                 i, 
@@ -137,9 +141,21 @@ GameState word_validation_system(GameState state) {
             );
     }
     
-    state.history.attempt_count++;
-    state.core.current_attempt = state.history.attempt_count;
+    // Update counters
+    state.core.guesses_this_level++;
+    state.core.total_lifetime_guesses++;
+    state.stats.total_guesses++;
     
+    // Check if level is complete
+    if (check_word_match(state.input.current_word, state.core.target_word)) {
+        state.core.level_complete = 1;
+        state.core.play_state = GAME_STATE_LEVEL_COMPLETE;
+    } else {
+        state.core.play_state = GAME_STATE_SHOWING_RESULT;
+        state.core.result_display_timer = RESULT_DISPLAY_TIME;
+    }
+    
+    // Clear input for next guess
     memset(state.input.current_word, 0, sizeof(state.input.current_word));
     state.input.current_letter_pos = 0;
     state.input.word_complete = 0;
@@ -148,52 +164,66 @@ GameState word_validation_system(GameState state) {
     return state;
 }
 
-GameState game_state_system(GameState state) {
-    if (state.core.is_game_over) {
+GameState result_display_system(GameState state) {
+    if (state.core.play_state != GAME_STATE_SHOWING_RESULT) {
         return state;
     }
     
-    if (state.history.attempt_count > 0) {
-        int last_attempt = state.history.attempt_count - 1;
-        if (check_word_match(state.history.all_guesses[last_attempt], state.core.target_word)) {
-            state.core.player_won = 1;
-            state.core.is_game_over = 1;
-        }
-    }
+    // Count down the display timer
+    state.core.result_display_timer -= state.system.frame_time;
     
-    if (state.history.attempt_count >= MAX_ATTEMPTS) {
-        state.core.is_game_over = 1;
+    // When timer expires, switch back to input state
+    if (state.core.result_display_timer <= 0.0f) {
+        state.core.play_state = GAME_STATE_INPUT;
     }
     
     return state;
 }
 
-GameState game_reset_system(GameState state, const char* new_target_word) {
-    if (state.core.is_game_over && state.system.space_pressed) {
-        state.core.should_restart = 1;
-        
-        GameStatsState preserved_stats = state.stats;
-        GameSettingsState preserved_settings = state.settings;
-        
-        state.stats.games_played++;
-        if (state.core.player_won) {
-            state.stats.games_won++;
-            state.stats.current_streak++;
-            if (state.stats.current_streak > state.stats.max_streak) {
-                state.stats.max_streak = state.stats.current_streak;
-            }
-            state.stats.win_distribution[state.history.attempt_count - 1]++;
-        } else {
-            state.stats.current_streak = 0;
-        }
-        
-        state.stats.win_percentage = (state.stats.games_played > 0) ? 
-            (float)state.stats.games_won / (float)state.stats.games_played * 100.0f : 0.0f;
-        
-        state = create_game_state(new_target_word);
-        state.stats = preserved_stats;
-        state.settings = preserved_settings;
+GameState level_progression_system(GameState state) {
+    if (state.core.play_state != GAME_STATE_LEVEL_COMPLETE) {
+        return state;
     }
+    
+    // Update statistics
+    state.stats.levels_completed++;
+    state.stats.current_level_streak++;
+    if (state.stats.current_level_streak > state.stats.max_level_streak) {
+        state.stats.max_level_streak = state.stats.current_level_streak;
+    }
+    
+    // Update best score if this level was solved with fewer guesses
+    if (state.core.guesses_this_level < state.stats.best_level_score) {
+        state.stats.best_level_score = state.core.guesses_this_level;
+    }
+    
+    // Calculate average guesses per level
+    if (state.stats.levels_completed > 0) {
+        state.stats.average_guesses_per_level = 
+            (float)state.stats.total_guesses / (float)state.stats.levels_completed;
+    }
+    
+    // Wait for space to continue to next level
+    if (state.system.space_pressed) {
+        state.core.play_state = GAME_STATE_INPUT_READY;
+    }
+    
+    return state;
+}
+
+GameState new_level_system(GameState state) {
+    if (state.core.play_state != GAME_STATE_INPUT_READY) {
+        return state;
+    }
+    
+    // Start new level
+    state.core.current_level++;
+    state.core.guesses_this_level = 0;
+    state.core.level_complete = 0;
+    state.core.play_state = GAME_STATE_INPUT;
+    
+    // Clear history for new level
+    state.history.recent_guess_count = 0;
     
     return state;
 }

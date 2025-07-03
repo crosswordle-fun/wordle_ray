@@ -12,8 +12,14 @@ int main(void) {
         state = input_system(state);
         state = word_editing_system(state);
         state = word_validation_system(state);
-        state = game_state_system(state);
-        state = game_reset_system(state, get_random_word());
+        state = result_display_system(state);
+        state = level_progression_system(state);
+        
+        // Handle new level setup
+        if (state.core.play_state == GAME_STATE_INPUT_READY) {
+            strcpy(state.core.target_word, get_random_word());
+            state = new_level_system(state);
+        }
         
         BeginDrawing();
         render_system(state);

@@ -11,6 +11,10 @@
 #define BOARD_MARGIN_TOP 120
 #define BOARD_MARGIN_BOTTOM 150
 
+// Level system constants
+#define MAX_RECENT_GUESSES 20
+#define RESULT_DISPLAY_TIME 1.5f
+
 #define WORDLE_GREEN (Color){106, 170, 100, 255}
 #define WORDLE_YELLOW (Color){201, 180, 88, 255}
 #define WORDLE_GRAY (Color){120, 124, 126, 255}
