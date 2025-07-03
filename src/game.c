@@ -445,11 +445,11 @@ CrosswordLevel get_crossword_level(int level) {
             crossword_level.word_mask[1][i] = 1;
         }
         
-        // CROSS (horizontal, row 4, cols 0-4)
+        // CROSS (horizontal, row 3, cols 0-4)
         const char* cross = "CROSS";
         for (int i = 0; i < 5; i++) {
-            crossword_level.solution[i][4] = cross[i];
-            crossword_level.word_mask[i][4] = 1;
+            crossword_level.solution[i][3] = cross[i];
+            crossword_level.word_mask[i][3] = 1;
         }
     }
     
