@@ -78,12 +78,16 @@ GameState input_system(GameState state) {
         // Calculate dynamic scroll bounds based on current game state
         int total_rows = state.history.level_guess_count + 1;  // completed guesses + current input
         float row_height = 70.0f;  // Approximate row height
+        int screen_height = GetScreenHeight();
         
-        // Allow scrolling up to see all previous guesses
-        float max_scroll_up = -(total_rows - 1) * row_height;  // Negative value to see oldest guess
+        // Allow scrolling up until attempt 1 (row 0) is centered on screen
+        // When row 0 is centered: board_start_y + 0 * row_height = screen_height/2 - cell_size/2
+        // Solving for camera_offset_y: camera_offset_y = (screen_height/2 - cell_size/2) - (desired_input_y - input_row_y)
+        float max_scroll_up = -(state.history.level_guess_count * row_height);  // Centers first attempt
         
-        // Limit scrolling down - don't go past current input row
-        float max_scroll_down = 100.0f;  // Small positive offset below current input
+        // Allow scrolling down until input row is centered on screen
+        // When input row is centered, camera_offset_y should be 0 (this is the natural center position)
+        float max_scroll_down = 0.0f;  // Input row centered is the natural state
         
         // Apply bounds
         if (state.system.camera_offset_y < max_scroll_up) {
