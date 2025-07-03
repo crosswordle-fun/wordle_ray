@@ -24,6 +24,12 @@ GameState create_game_state(const char* target_word) {
     state.stats.average_guesses_per_level = 0.0f;
     state.stats.best_level_score = 999;  // Initialize to high number
     
+    // Initialize letter bag
+    for (int i = 0; i < 26; i++) {
+        state.stats.letter_counts[i] = 0;
+    }
+    state.stats.show_letter_bag = 0;
+    
     state.settings.sound_enabled = 1;
     state.settings.animations_enabled = 1;
     state.settings.hard_mode = 0;
@@ -127,7 +133,7 @@ GameState input_system(GameState state) {
                 state.system.debug_mode = !state.system.debug_mode;
                 break;
             case 2:
-                state.settings.sound_enabled = !state.settings.sound_enabled;
+                state.stats.show_letter_bag = !state.stats.show_letter_bag;
                 break;
             case 3:
                 state.settings.animations_enabled = !state.settings.animations_enabled;
@@ -238,6 +244,12 @@ GameState word_validation_system(GameState state) {
     
     // Check if level is complete
     if (check_word_match(state.input.current_word, state.core.target_word)) {
+        // Award a random letter token from the solved word (only happens once per level)
+        int random_letter_index = rand() % WORD_LENGTH;
+        char awarded_letter = state.core.target_word[random_letter_index];
+        int letter_array_index = awarded_letter - 'A';  // Convert A-Z to 0-25
+        state.stats.letter_counts[letter_array_index]++;
+        
         state.core.level_complete = 1;
         state.core.play_state = GAME_STATE_LEVEL_COMPLETE;
     } else {
@@ -286,6 +298,7 @@ GameState level_progression_system(GameState state) {
         state.stats.average_guesses_per_level = 
             (float)state.stats.total_guesses / (float)state.stats.levels_completed;
     }
+    
     
     // Wait for space to continue to next level
     if (state.system.space_pressed) {

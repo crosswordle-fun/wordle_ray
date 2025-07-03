@@ -55,6 +55,8 @@ typedef struct {
     int total_guesses;
     float average_guesses_per_level;
     int best_level_score;  // minimum guesses for any level
+    int letter_counts[26]; // A=0, B=1, ..., Z=25 - collected letter tokens
+    int show_letter_bag;   // Toggle for letter bag display
 } GameStatsState;
 
 typedef struct {

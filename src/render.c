@@ -188,7 +188,7 @@ void ui_render_system(GameState state) {
         
         DrawText(instruction, instruction_x, instruction_y, instruction_font_size, WORDLE_BORDER);
         
-        const char* debug_instruction = "Press 1 for debug mode | 2-5 for settings";
+        const char* debug_instruction = "Press 1 for debug mode | 2 for letter bag | 3-5 for settings";
         int debug_instruction_font_size = (int)(layout.screen_width * 0.018f);
         if (debug_instruction_font_size < 12) debug_instruction_font_size = 12;
         if (debug_instruction_font_size > 16) debug_instruction_font_size = 16;
@@ -215,6 +215,36 @@ void ui_render_system(GameState state) {
     int lifetime_y = layout.screen_height - 30;
     
     DrawText(lifetime_stats, lifetime_x, lifetime_y, lifetime_font_size, WORDLE_BORDER);
+    
+    // Letter bag display
+    if (state.stats.show_letter_bag) {
+        char letter_bag_text[300] = "Letter Bag: ";
+        int bag_start_len = strlen(letter_bag_text);
+        
+        // Build letter bag string showing only letters with count > 0
+        for (int i = 0; i < 26; i++) {
+            if (state.stats.letter_counts[i] > 0) {
+                char letter_entry[10];
+                sprintf(letter_entry, "%c:%d ", 'A' + i, state.stats.letter_counts[i]);
+                strcat(letter_bag_text, letter_entry);
+            }
+        }
+        
+        // If no letters collected yet, show a message
+        if (strlen(letter_bag_text) == bag_start_len) {
+            strcat(letter_bag_text, "No letters collected yet");
+        }
+        
+        int bag_font_size = (int)(layout.screen_width * 0.016f);
+        if (bag_font_size < 12) bag_font_size = 12;
+        if (bag_font_size > 16) bag_font_size = 16;
+        
+        int bag_width = MeasureText(letter_bag_text, bag_font_size);
+        int bag_x = (layout.screen_width - bag_width) / 2;
+        int bag_y = lifetime_y - 25;  // Above lifetime stats
+        
+        DrawText(letter_bag_text, bag_x, bag_y, bag_font_size, WORDLE_YELLOW);
+    }
 }
 
 void render_system(GameState state) {
