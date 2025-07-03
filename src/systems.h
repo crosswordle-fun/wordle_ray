@@ -19,6 +19,9 @@ GameState new_level_system(GameState state);
 GameState view_switching_system(GameState state);
 GameState crossword_input_system(GameState state);
 
+// Crossword System Function Declarations
+CrosswordLevel get_crossword_level(int level);
+
 // Game Logic Helper Function Declarations
 int is_letter_in_target_word(char letter, const char* target_word);
 LetterState calculate_letter_state(char guess_letter, int position, const char* target_word);

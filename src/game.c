@@ -56,7 +56,10 @@ GameState create_game_state(const char* target_word) {
             state.crossword.grid[x][y] = '\0';
         }
     }
-    state.crossword.cursor_x = 0;
+    state.crossword.current_level = get_crossword_level(1);
+    
+    // Initialize cursor to first word cell
+    state.crossword.cursor_x = 1;  // First letter of SWORD
     state.crossword.cursor_y = 0;
     
     return state;
@@ -337,51 +340,117 @@ GameState crossword_input_system(GameState state) {
         return state;
     }
     
-    // Arrow key navigation
-    if (state.system.up_arrow_pressed && state.crossword.cursor_y > 0) {
-        state.crossword.cursor_y--;
+    // Arrow key navigation - only move to word cells
+    if (state.system.up_arrow_pressed) {
+        for (int y = state.crossword.cursor_y - 1; y >= 0; y--) {
+            if (state.crossword.current_level.word_mask[state.crossword.cursor_x][y]) {
+                state.crossword.cursor_y = y;
+                break;
+            }
+        }
     }
-    if (state.system.down_arrow_pressed && state.crossword.cursor_y < 8) {
-        state.crossword.cursor_y++;
+    if (state.system.down_arrow_pressed) {
+        for (int y = state.crossword.cursor_y + 1; y < 9; y++) {
+            if (state.crossword.current_level.word_mask[state.crossword.cursor_x][y]) {
+                state.crossword.cursor_y = y;
+                break;
+            }
+        }
     }
-    if (IsKeyPressed(KEY_LEFT) && state.crossword.cursor_x > 0) {
-        state.crossword.cursor_x--;
+    if (IsKeyPressed(KEY_LEFT)) {
+        for (int x = state.crossword.cursor_x - 1; x >= 0; x--) {
+            if (state.crossword.current_level.word_mask[x][state.crossword.cursor_y]) {
+                state.crossword.cursor_x = x;
+                break;
+            }
+        }
     }
-    if (IsKeyPressed(KEY_RIGHT) && state.crossword.cursor_x < 8) {
-        state.crossword.cursor_x++;
+    if (IsKeyPressed(KEY_RIGHT)) {
+        for (int x = state.crossword.cursor_x + 1; x < 9; x++) {
+            if (state.crossword.current_level.word_mask[x][state.crossword.cursor_y]) {
+                state.crossword.cursor_x = x;
+                break;
+            }
+        }
     }
     
-    // Letter placement
+    // Letter placement (only in word cells)
     if (state.system.letter_pressed) {
-        char letter = state.system.pressed_letter;
-        int letter_index = letter - 'A';
-        
-        // Check if player has this letter token
-        if (state.stats.letter_counts[letter_index] > 0) {
-            // Remove any existing letter at cursor position and return it to bag
+        // Check if current position is a word cell
+        if (state.crossword.current_level.word_mask[state.crossword.cursor_x][state.crossword.cursor_y]) {
+            char letter = state.system.pressed_letter;
+            int letter_index = letter - 'A';
+            
+            // Check if player has this letter token
+            if (state.stats.letter_counts[letter_index] > 0) {
+                // Remove any existing letter at cursor position and return it to bag
+                char existing_letter = state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y];
+                if (existing_letter != '\0') {
+                    int existing_index = existing_letter - 'A';
+                    state.stats.letter_counts[existing_index]++;
+                }
+                
+                // Place new letter and remove from bag
+                state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = letter;
+                state.stats.letter_counts[letter_index]--;
+            }
+        }
+    }
+    
+    // Letter removal (only in word cells)
+    if (state.system.backspace_pressed) {
+        // Check if current position is a word cell
+        if (state.crossword.current_level.word_mask[state.crossword.cursor_x][state.crossword.cursor_y]) {
             char existing_letter = state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y];
             if (existing_letter != '\0') {
                 int existing_index = existing_letter - 'A';
                 state.stats.letter_counts[existing_index]++;
+                state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = '\0';
             }
-            
-            // Place new letter and remove from bag
-            state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = letter;
-            state.stats.letter_counts[letter_index]--;
-        }
-    }
-    
-    // Letter removal
-    if (state.system.backspace_pressed) {
-        char existing_letter = state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y];
-        if (existing_letter != '\0') {
-            int existing_index = existing_letter - 'A';
-            state.stats.letter_counts[existing_index]++;
-            state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = '\0';
         }
     }
     
     return state;
+}
+
+CrosswordLevel get_crossword_level(int level) {
+    CrosswordLevel crossword_level = {0};
+    crossword_level.level = level;
+    
+    // Initialize all cells as blocked (0) and empty
+    for (int x = 0; x < 9; x++) {
+        for (int y = 0; y < 9; y++) {
+            crossword_level.word_mask[x][y] = 0;
+            crossword_level.solution[x][y] = '\0';
+        }
+    }
+    
+    if (level == 1) {
+        // Level 1: SWORD (horizontal row 0, cols 1-5), STARK (vertical col 1, rows 0-4), CROSS (horizontal row 4, cols 0-4)
+        
+        // SWORD (horizontal, row 0, cols 1-5)
+        const char* sword = "SWORD";
+        for (int i = 0; i < 5; i++) {
+            crossword_level.solution[1 + i][0] = sword[i];
+            crossword_level.word_mask[1 + i][0] = 1;
+        }
+        
+        // STARK (vertical, col 1, rows 0-4) 
+        const char* stark = "STARK";
+        for (int i = 0; i < 5; i++) {
+            crossword_level.solution[1][i] = stark[i];
+            crossword_level.word_mask[1][i] = 1;
+        }
+        
+        // CROSS (horizontal, row 4, cols 0-4)
+        const char* cross = "CROSS";
+        for (int i = 0; i < 5; i++) {
+            crossword_level.solution[i][4] = cross[i];
+            crossword_level.word_mask[i][4] = 1;
+        }
+    }
+    
+    return crossword_level;
 }
 
 GameState new_level_system(GameState state) {

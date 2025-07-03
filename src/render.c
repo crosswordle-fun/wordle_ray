@@ -276,32 +276,65 @@ void crossword_render_system(GameState state) {
             int cell_x = grid_start_x + x * cell_size;
             int cell_y = grid_start_y + y * cell_size;
             
-            Color cell_color = WORDLE_WHITE;
+            // Check if this is a word cell or blocked cell
+            int is_word_cell = state.crossword.current_level.word_mask[x][y];
+            
+            Color cell_color;
             Color border_color = WORDLE_BORDER;
             int border_width = 2;
             
-            // Highlight cursor position
-            if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
-                cell_color = WORDLE_YELLOW;
-                border_color = WORDLE_WHITE;
-                border_width = 3;
+            if (!is_word_cell) {
+                // Blocked cell - dark gray
+                cell_color = WORDLE_DARK_GRAY;
+                border_color = WORDLE_BLACK;
+            } else {
+                // Word cell - white background
+                cell_color = WORDLE_WHITE;
+                
+                // Check if letter matches solution for validation feedback
+                char placed_letter = state.crossword.grid[x][y];
+                char solution_letter = state.crossword.current_level.solution[x][y];
+                
+                if (placed_letter != '\0') {
+                    if (placed_letter == solution_letter) {
+                        cell_color = WORDLE_GREEN;  // Correct letter
+                    } else {
+                        cell_color = (Color){255, 200, 200, 255};  // Light red for incorrect
+                    }
+                }
+                
+                // Highlight cursor position (only in word cells)
+                if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
+                    if (placed_letter == '\0' || placed_letter != solution_letter) {
+                        cell_color = WORDLE_YELLOW;  // Cursor highlight
+                    }
+                    border_color = WORDLE_WHITE;
+                    border_width = 3;
+                }
             }
             
             // Draw cell
             DrawRectangle(cell_x, cell_y, cell_size, cell_size, cell_color);
             DrawRectangleLinesEx((Rectangle){cell_x, cell_y, cell_size, cell_size}, border_width, border_color);
             
-            // Draw letter if present
-            char letter = state.crossword.grid[x][y];
-            if (letter != '\0') {
-                char letter_string[2] = {letter, '\0'};
-                int font_size = (int)(cell_size * 0.6f);
-                int text_width = MeasureText(letter_string, font_size);
-                int text_x = cell_x + (cell_size - text_width) / 2;
-                int text_y = cell_y + (cell_size - font_size) / 2;
-                
-                Color text_color = (x == state.crossword.cursor_x && y == state.crossword.cursor_y) ? WORDLE_BLACK : WORDLE_BLACK;
-                DrawText(letter_string, text_x, text_y, font_size, text_color);
+            // Draw letter if present (only in word cells)
+            if (is_word_cell) {
+                char letter = state.crossword.grid[x][y];
+                if (letter != '\0') {
+                    char letter_string[2] = {letter, '\0'};
+                    int font_size = (int)(cell_size * 0.6f);
+                    int text_width = MeasureText(letter_string, font_size);
+                    int text_x = cell_x + (cell_size - text_width) / 2;
+                    int text_y = cell_y + (cell_size - font_size) / 2;
+                    
+                    // Text color based on cell background
+                    Color text_color = WORDLE_BLACK;
+                    if (cell_color.r == WORDLE_GREEN.r && cell_color.g == WORDLE_GREEN.g) {
+                        text_color = WORDLE_WHITE;  // White text on green background
+                    }
+                    
+                    DrawText(letter_string, text_x, text_y, font_size, text_color);
+                }
             }
         }
     }
