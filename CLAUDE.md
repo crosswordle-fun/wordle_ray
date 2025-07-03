@@ -60,6 +60,12 @@ The game uses a comprehensive `GameState` struct containing:
 - Game statistics tracking (games played, win rate, streaks)
 - Fullscreen support (F11 key)
 - Proper letter state calculation with position-aware logic
+- Debug mode with number key controls:
+  - Press 1: Toggle debug mode (shows target word)
+  - Press 2: Toggle sound effects
+  - Press 3: Toggle animations
+  - Press 4: Toggle hard mode
+  - Press 5: Toggle color blind mode
 
 ## Key Dependencies
 - Raylib 5.5 (automatically fetched if not found)

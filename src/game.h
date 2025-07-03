@@ -70,6 +70,8 @@ typedef struct {
     char pressed_letter;
     double frame_time;
     int debug_mode;
+    int number_key_pressed;
+    int pressed_number;
 } SystemState;
 
 typedef struct {
@@ -129,10 +131,33 @@ GameState input_system(GameState state) {
     state.system.f11_pressed = IsKeyPressed(KEY_F11);
     state.system.pressed_letter = state.system.letter_pressed ? (char)state.system.last_key_pressed : 0;
     
+    state.system.number_key_pressed = (state.system.last_key_pressed >= KEY_ONE && state.system.last_key_pressed <= KEY_NINE);
+    state.system.pressed_number = state.system.number_key_pressed ? (state.system.last_key_pressed - KEY_ONE + 1) : 0;
+    
     state.system.frame_time = GetFrameTime();
     
     if (state.system.f11_pressed) {
         ToggleFullscreen();
+    }
+    
+    if (state.system.number_key_pressed) {
+        switch (state.system.pressed_number) {
+            case 1:
+                state.system.debug_mode = !state.system.debug_mode;
+                break;
+            case 2:
+                state.settings.sound_enabled = !state.settings.sound_enabled;
+                break;
+            case 3:
+                state.settings.animations_enabled = !state.settings.animations_enabled;
+                break;
+            case 4:
+                state.settings.hard_mode = !state.settings.hard_mode;
+                break;
+            case 5:
+                state.settings.color_blind_mode = !state.settings.color_blind_mode;
+                break;
+        }
     }
     
     return state;

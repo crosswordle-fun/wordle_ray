@@ -130,6 +130,20 @@ void ui_render_system(GameState state) {
     
     DrawText(title, title_x, title_y, title_font_size, WORDLE_WHITE);
     
+    if (state.system.debug_mode) {
+        char debug_message[50];
+        sprintf(debug_message, "DEBUG: Answer is %s", state.core.target_word);
+        int debug_font_size = (int)(layout.screen_width * 0.025f);
+        if (debug_font_size < 16) debug_font_size = 16;
+        if (debug_font_size > 22) debug_font_size = 22;
+        
+        int debug_width = MeasureText(debug_message, debug_font_size);
+        int debug_x = (layout.screen_width - debug_width) / 2;
+        int debug_y = title_y + title_font_size + 10;
+        
+        DrawText(debug_message, debug_x, debug_y, debug_font_size, WORDLE_YELLOW);
+    }
+    
     int line_margin = (int)(layout.screen_width * 0.06f);
     DrawLine(line_margin, 90, layout.screen_width - line_margin, 90, WORDLE_BORDER);
     
@@ -197,6 +211,17 @@ void ui_render_system(GameState state) {
         
         DrawText(instruction, instruction_x, instruction_y, instruction_font_size, WORDLE_BORDER);
         
+        const char* debug_instruction = "Press 1 for debug mode | 2-5 for settings";
+        int debug_instruction_font_size = (int)(layout.screen_width * 0.018f);
+        if (debug_instruction_font_size < 12) debug_instruction_font_size = 12;
+        if (debug_instruction_font_size > 16) debug_instruction_font_size = 16;
+        
+        int debug_instruction_width = MeasureText(debug_instruction, debug_instruction_font_size);
+        int debug_instruction_x = (layout.screen_width - debug_instruction_width) / 2;
+        int debug_instruction_y = instruction_y + 25;
+        
+        DrawText(debug_instruction, debug_instruction_x, debug_instruction_y, debug_instruction_font_size, WORDLE_GRAY);
+        
         char attempt_message[20];
         sprintf(attempt_message, "Attempt %d of %d", state.history.attempt_count + 1, MAX_ATTEMPTS);
         int attempt_font_size = (int)(layout.screen_width * 0.02f);
@@ -205,7 +230,7 @@ void ui_render_system(GameState state) {
         
         int attempt_width = MeasureText(attempt_message, attempt_font_size);
         int attempt_x = (layout.screen_width - attempt_width) / 2;
-        int attempt_y = instruction_y + 25;
+        int attempt_y = debug_instruction_y + 20;
         
         DrawText(attempt_message, attempt_x, attempt_y, attempt_font_size, WORDLE_GRAY);
     }
