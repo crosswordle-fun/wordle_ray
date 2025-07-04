@@ -108,7 +108,7 @@ void board_render_system(GameState state) {
 void ui_render_system(GameState state) {
     LayoutConfig layout = calculate_layout(state);
     
-    // Level title at top
+    // Calculate top bar content and dimensions
     char level_title[50];
     sprintf(level_title, "WORDLE - LEVEL %d", state.core.current_level);
     int title_font_size = (int)(layout.screen_width * 0.05f);
@@ -117,26 +117,21 @@ void ui_render_system(GameState state) {
     
     int title_width = MeasureText(level_title, title_font_size);
     int title_x = (layout.screen_width - title_width) / 2;
-    int title_y = 40;
+    int title_y = 20;  // Top margin
     
-    DrawText(level_title, title_x, title_y, title_font_size, WORDLE_WHITE);
-    
-    // Debug info
+    // Calculate debug info if present
+    int debug_font_size = 0;
+    int debug_y = 0;
+    char debug_message[50] = "";
     if (state.system.debug_mode) {
-        char debug_message[50];
         sprintf(debug_message, "DEBUG: Answer is %s", state.core.target_word);
-        int debug_font_size = (int)(layout.screen_width * 0.025f);
+        debug_font_size = (int)(layout.screen_width * 0.025f);
         if (debug_font_size < 16) debug_font_size = 16;
         if (debug_font_size > 22) debug_font_size = 22;
-        
-        int debug_width = MeasureText(debug_message, debug_font_size);
-        int debug_x = (layout.screen_width - debug_width) / 2;
-        int debug_y = title_y + title_font_size + 10;
-        
-        DrawText(debug_message, debug_x, debug_y, debug_font_size, WORDLE_YELLOW);
+        debug_y = title_y + title_font_size + 10;
     }
     
-    // Current level stats above the word
+    // Calculate level stats
     char level_stats[100];
     sprintf(level_stats, "Guess %d this level | %d total guesses", 
             state.core.guesses_this_level + 1, state.core.total_lifetime_guesses);
@@ -146,9 +141,25 @@ void ui_render_system(GameState state) {
     
     int stats_width = MeasureText(level_stats, stats_font_size);
     int stats_x = (layout.screen_width - stats_width) / 2;
-    int stats_y = layout.board_start_y - 60;
+    int stats_y = (state.system.debug_mode) ? debug_y + debug_font_size + 10 : title_y + title_font_size + 10;
     
-    DrawText(level_stats, stats_x, stats_y, stats_font_size, WORDLE_GRAY);
+    // Calculate top bar height
+    int top_bar_height = stats_y + stats_font_size + 20;  // 20px bottom padding
+    
+    // Draw full-width white top bar
+    Rectangle top_bar = {0, 0, layout.screen_width, top_bar_height};
+    DrawRectangleRec(top_bar, WORDLE_WHITE);
+    
+    // Draw top bar content with dark text
+    DrawText(level_title, title_x, title_y, title_font_size, WORDLE_BLACK);
+    
+    if (state.system.debug_mode) {
+        int debug_width = MeasureText(debug_message, debug_font_size);
+        int debug_x = (layout.screen_width - debug_width) / 2;
+        DrawText(debug_message, debug_x, debug_y, debug_font_size, (Color){200, 140, 0, 255});  // Dark yellow
+    }
+    
+    DrawText(level_stats, stats_x, stats_y, stats_font_size, WORDLE_DARK_GRAY);
     
     // Game state specific messages
     if (state.core.play_state == GAME_STATE_LEVEL_COMPLETE) {
@@ -157,12 +168,6 @@ void ui_render_system(GameState state) {
         if (success_font_size < 20) success_font_size = 20;
         if (success_font_size > 36) success_font_size = 36;
         
-        int success_width = MeasureText(success_message, success_font_size);
-        int success_x = (layout.screen_width - success_width) / 2;
-        int success_y = layout.board_start_y + layout.board_height + 40;
-        
-        DrawText(success_message, success_x, success_y, success_font_size, WORDLE_GREEN);
-        
         char level_score[100];
         sprintf(level_score, "Solved in %d guesses! Press SPACE for Level %d", 
                 state.core.guesses_this_level, state.core.current_level + 1);
@@ -170,96 +175,136 @@ void ui_render_system(GameState state) {
         if (score_font_size < 16) score_font_size = 16;
         if (score_font_size > 24) score_font_size = 24;
         
+        // Calculate completion message bar
+        int completion_bar_height = success_font_size + score_font_size + 40;  // 40px padding
+        int completion_bar_y = layout.board_start_y + layout.board_height + 20;
+        
+        // Draw completion message bar
+        Rectangle completion_bar = {0, completion_bar_y, layout.screen_width, completion_bar_height};
+        DrawRectangleRec(completion_bar, WORDLE_WHITE);
+        
+        // Draw completion content
+        int success_width = MeasureText(success_message, success_font_size);
+        int success_x = (layout.screen_width - success_width) / 2;
+        int success_y = completion_bar_y + 15;
+        DrawText(success_message, success_x, success_y, success_font_size, WORDLE_GREEN);
+        
         int score_width = MeasureText(level_score, score_font_size);
         int score_x = (layout.screen_width - score_width) / 2;
-        int score_y = success_y + 50;
-        
-        DrawText(level_score, score_x, score_y, score_font_size, WORDLE_WHITE);
+        int score_y = success_y + success_font_size + 10;
+        DrawText(level_score, score_x, score_y, score_font_size, WORDLE_BLACK);
         
     } else {
-        // Normal gameplay instructions
+        // Calculate bottom bar content and dimensions
         const char* instruction = "Type a 5-letter word and press ENTER";
         int instruction_font_size = (int)(layout.screen_width * 0.022f);
         if (instruction_font_size < 16) instruction_font_size = 16;
         if (instruction_font_size > 22) instruction_font_size = 22;
-        
-        int instruction_width = MeasureText(instruction, instruction_font_size);
-        int instruction_x = (layout.screen_width - instruction_width) / 2;
-        int instruction_y = layout.board_start_y + layout.board_height + 60;
-        
-        DrawText(instruction, instruction_x, instruction_y, instruction_font_size, WORDLE_BORDER);
         
         const char* debug_instruction = "Press 1 for debug mode | 2 for letter bag | 3 for test tokens | 4-5 for settings";
         int debug_instruction_font_size = (int)(layout.screen_width * 0.018f);
         if (debug_instruction_font_size < 12) debug_instruction_font_size = 12;
         if (debug_instruction_font_size > 16) debug_instruction_font_size = 16;
         
+        // Lifetime stats
+        char lifetime_stats[150];
+        sprintf(lifetime_stats, "Levels completed: %d | Best: %d guesses | Average: %.1f guesses", 
+                state.stats.levels_completed, 
+                (state.stats.best_level_score < 999) ? state.stats.best_level_score : 0,
+                state.stats.average_guesses_per_level);
+        int lifetime_font_size = (int)(layout.screen_width * 0.018f);
+        if (lifetime_font_size < 12) lifetime_font_size = 12;
+        if (lifetime_font_size > 16) lifetime_font_size = 16;
+        
+        // Letter bag text
+        char letter_bag_text[300] = "";
+        int bag_font_size = 0;
+        if (state.stats.show_letter_bag) {
+            strcpy(letter_bag_text, "Letter Bag: ");
+            int bag_start_len = strlen(letter_bag_text);
+            
+            for (int i = 0; i < 26; i++) {
+                if (state.stats.letter_counts[i] > 0) {
+                    char letter_entry[10];
+                    sprintf(letter_entry, "%c:%d ", 'A' + i, state.stats.letter_counts[i]);
+                    strcat(letter_bag_text, letter_entry);
+                }
+            }
+            
+            if (strlen(letter_bag_text) == bag_start_len) {
+                strcat(letter_bag_text, "No letters collected yet");
+            }
+            
+            bag_font_size = (int)(layout.screen_width * 0.016f);
+            if (bag_font_size < 12) bag_font_size = 12;
+            if (bag_font_size > 16) bag_font_size = 16;
+        }
+        
+        // Calculate bottom bar height and position
+        int total_lines = 3 + (state.stats.show_letter_bag ? 1 : 0);  // instruction + debug + lifetime + bag
+        int line_spacing = 5;
+        int bottom_bar_height = instruction_font_size + debug_instruction_font_size + lifetime_font_size + 
+                               (state.stats.show_letter_bag ? bag_font_size : 0) + 
+                               (total_lines - 1) * line_spacing + 40;  // 40px total padding
+        
+        int bottom_bar_y = layout.screen_height - bottom_bar_height;
+        
+        // Draw full-width white bottom bar
+        Rectangle bottom_bar = {0, bottom_bar_y, layout.screen_width, bottom_bar_height};
+        DrawRectangleRec(bottom_bar, WORDLE_WHITE);
+        
+        // Draw bottom bar content with dark text
+        int current_y = bottom_bar_y + 20;  // Top padding
+        
+        // Letter bag (if shown) - at top of bottom bar
+        if (state.stats.show_letter_bag) {
+            int bag_width = MeasureText(letter_bag_text, bag_font_size);
+            int bag_x = (layout.screen_width - bag_width) / 2;
+            DrawText(letter_bag_text, bag_x, current_y, bag_font_size, (Color){200, 140, 0, 255});  // Dark yellow
+            current_y += bag_font_size + line_spacing;
+        }
+        
+        // Lifetime stats
+        int lifetime_width = MeasureText(lifetime_stats, lifetime_font_size);
+        int lifetime_x = (layout.screen_width - lifetime_width) / 2;
+        DrawText(lifetime_stats, lifetime_x, current_y, lifetime_font_size, WORDLE_DARK_GRAY);
+        current_y += lifetime_font_size + line_spacing;
+        
+        // Debug instruction
         int debug_instruction_width = MeasureText(debug_instruction, debug_instruction_font_size);
         int debug_instruction_x = (layout.screen_width - debug_instruction_width) / 2;
-        int debug_instruction_y = instruction_y + 25;
+        DrawText(debug_instruction, debug_instruction_x, current_y, debug_instruction_font_size, WORDLE_DARK_GRAY);
+        current_y += debug_instruction_font_size + line_spacing;
         
-        DrawText(debug_instruction, debug_instruction_x, debug_instruction_y, debug_instruction_font_size, WORDLE_GRAY);
-    }
-    
-    // Lifetime stats at bottom
-    char lifetime_stats[150];
-    sprintf(lifetime_stats, "Levels completed: %d | Best: %d guesses | Average: %.1f guesses", 
-            state.stats.levels_completed, 
-            (state.stats.best_level_score < 999) ? state.stats.best_level_score : 0,
-            state.stats.average_guesses_per_level);
-    int lifetime_font_size = (int)(layout.screen_width * 0.018f);
-    if (lifetime_font_size < 12) lifetime_font_size = 12;
-    if (lifetime_font_size > 16) lifetime_font_size = 16;
-    
-    int lifetime_width = MeasureText(lifetime_stats, lifetime_font_size);
-    int lifetime_x = (layout.screen_width - lifetime_width) / 2;
-    int lifetime_y = layout.screen_height - 30;
-    
-    DrawText(lifetime_stats, lifetime_x, lifetime_y, lifetime_font_size, WORDLE_BORDER);
-    
-    // Letter bag display
-    if (state.stats.show_letter_bag) {
-        char letter_bag_text[300] = "Letter Bag: ";
-        int bag_start_len = strlen(letter_bag_text);
-        
-        // Build letter bag string showing only letters with count > 0
-        for (int i = 0; i < 26; i++) {
-            if (state.stats.letter_counts[i] > 0) {
-                char letter_entry[10];
-                sprintf(letter_entry, "%c:%d ", 'A' + i, state.stats.letter_counts[i]);
-                strcat(letter_bag_text, letter_entry);
-            }
-        }
-        
-        // If no letters collected yet, show a message
-        if (strlen(letter_bag_text) == bag_start_len) {
-            strcat(letter_bag_text, "No letters collected yet");
-        }
-        
-        int bag_font_size = (int)(layout.screen_width * 0.016f);
-        if (bag_font_size < 12) bag_font_size = 12;
-        if (bag_font_size > 16) bag_font_size = 16;
-        
-        int bag_width = MeasureText(letter_bag_text, bag_font_size);
-        int bag_x = (layout.screen_width - bag_width) / 2;
-        int bag_y = lifetime_y - 25;  // Above lifetime stats
-        
-        DrawText(letter_bag_text, bag_x, bag_y, bag_font_size, WORDLE_YELLOW);
+        // Main instruction
+        int instruction_width = MeasureText(instruction, instruction_font_size);
+        int instruction_x = (layout.screen_width - instruction_width) / 2;
+        DrawText(instruction, instruction_x, current_y, instruction_font_size, WORDLE_BLACK);
     }
 }
 
 void crossword_render_system(GameState state) {
-    // Title
+    int screen_width = GetScreenWidth();
+    
+    // Calculate top bar for crossword title
     const char* title = "CROSSWORD";
     int title_font_size = 48;
     int title_width = MeasureText(title, title_font_size);
-    int title_x = (GetScreenWidth() - title_width) / 2;
-    int title_y = 40;
-    DrawText(title, title_x, title_y, title_font_size, WORDLE_WHITE);
+    int title_x = (screen_width - title_width) / 2;
+    int title_y = 20;  // Top margin
+    
+    // Calculate top bar height
+    int top_bar_height = title_font_size + 40;  // 40px total padding
+    
+    // Draw full-width white top bar
+    Rectangle top_bar = {0, 0, screen_width, top_bar_height};
+    DrawRectangleRec(top_bar, WORDLE_WHITE);
+    
+    // Draw title with dark text
+    DrawText(title, title_x, title_y, title_font_size, WORDLE_BLACK);
     
     // Calculate grid layout
     int grid_size = 9;
-    int screen_width = GetScreenWidth();
     int screen_height = GetScreenHeight();
     int available_size = (screen_width < screen_height - 200) ? screen_width - 100 : screen_height - 300;
     int cell_size = available_size / grid_size;
@@ -396,20 +441,18 @@ void crossword_render_system(GameState state) {
     
     int word_font_size = 18;
     int word_x = grid_start_x;  // Top-left of grid
-    int word_y = grid_start_y - 30;  // Above the grid
-    DrawText(word_indicator, word_x, word_y, word_font_size, WORDLE_YELLOW);
+    int word_y = grid_start_y - 40;  // Above the grid
+    DrawText(word_indicator, word_x, word_y, word_font_size, (Color){200, 140, 0, 255});  // Dark yellow
     
-    // Position instructions near bottom of screen
+    // Calculate bottom bar content and dimensions
     const char* instructions = "Left/Right: select word | Up/Down: navigate within word | Letters: place letters | Enter: validate word | Tab: return to Wordle";
     int inst_font_size = 14;
-    int inst_width = MeasureText(instructions, inst_font_size);
-    int inst_x = (screen_width - inst_width) / 2;
-    int inst_y = screen_height - 80;  // Near bottom of screen
-    DrawText(instructions, inst_x, inst_y, inst_font_size, WORDLE_GRAY);
     
-    // Letter bag display above instructions
+    // Letter bag text
+    char letter_bag_text[300] = "";
+    int bag_font_size = 0;
     if (state.stats.show_letter_bag) {
-        char letter_bag_text[300] = "Available Letters: ";
+        strcpy(letter_bag_text, "Available Letters: ");
         int bag_start_len = strlen(letter_bag_text);
         
         for (int i = 0; i < 26; i++) {
@@ -424,13 +467,36 @@ void crossword_render_system(GameState state) {
             strcat(letter_bag_text, "None - play Wordle to earn letters!");
         }
         
-        int bag_font_size = 14;
+        bag_font_size = 14;
+    }
+    
+    // Calculate bottom bar height and position
+    int total_lines = 1 + (state.stats.show_letter_bag ? 1 : 0);  // instructions + bag
+    int line_spacing = 5;
+    int bottom_bar_height = inst_font_size + (state.stats.show_letter_bag ? bag_font_size : 0) + 
+                           (total_lines - 1) * line_spacing + 40;  // 40px total padding
+    
+    int bottom_bar_y = screen_height - bottom_bar_height;
+    
+    // Draw full-width white bottom bar
+    Rectangle bottom_bar = {0, bottom_bar_y, screen_width, bottom_bar_height};
+    DrawRectangleRec(bottom_bar, WORDLE_WHITE);
+    
+    // Draw bottom bar content with dark text
+    int current_y = bottom_bar_y + 20;  // Top padding
+    
+    // Letter bag (if shown) - at top of bottom bar
+    if (state.stats.show_letter_bag) {
         int bag_width = MeasureText(letter_bag_text, bag_font_size);
         int bag_x = (screen_width - bag_width) / 2;
-        int bag_y = inst_y - 25;  // Above instructions
-        
-        DrawText(letter_bag_text, bag_x, bag_y, bag_font_size, WORDLE_YELLOW);
+        DrawText(letter_bag_text, bag_x, current_y, bag_font_size, (Color){200, 140, 0, 255});  // Dark yellow
+        current_y += bag_font_size + line_spacing;
     }
+    
+    // Instructions
+    int inst_width = MeasureText(instructions, inst_font_size);
+    int inst_x = (screen_width - inst_width) / 2;
+    DrawText(instructions, inst_x, current_y, inst_font_size, WORDLE_BLACK);
 }
 
 void home_screen_render_system(GameState state) {
@@ -446,6 +512,16 @@ void home_screen_render_system(GameState state) {
     int title_width = MeasureText(title, title_font_size);
     int title_x = (screen_width - title_width) / 2;
     int title_y = screen_height / 3;
+    
+    // Draw background rectangle for home title
+    int title_bg_padding = 12;
+    Rectangle title_bg = {
+        title_x - title_bg_padding,
+        title_y - title_bg_padding,
+        title_width + 2 * title_bg_padding,
+        title_font_size + 2 * title_bg_padding
+    };
+    DrawRectangleRec(title_bg, (Color){0, 0, 0, 180});  // Semi-transparent black
     
     DrawText(title, title_x, title_y, title_font_size, WORDLE_WHITE);
     
