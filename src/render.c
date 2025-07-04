@@ -125,9 +125,9 @@ void ui_render_system(GameState state) {
     char debug_message[50] = "";
     if (state.system.debug_mode) {
         sprintf(debug_message, "DEBUG: Answer is %s", state.core.target_word);
-        debug_font_size = (int)(layout.screen_width * 0.025f);
-        if (debug_font_size < 16) debug_font_size = 16;
-        if (debug_font_size > 22) debug_font_size = 22;
+        debug_font_size = (int)(layout.screen_width * 0.035f);
+        if (debug_font_size < 20) debug_font_size = 20;
+        if (debug_font_size > 28) debug_font_size = 28;
         debug_y = title_y + title_font_size + 10;
     }
     
@@ -135,9 +135,9 @@ void ui_render_system(GameState state) {
     char level_stats[100];
     sprintf(level_stats, "Guess %d this level | %d total guesses", 
             state.core.guesses_this_level + 1, state.core.total_lifetime_guesses);
-    int stats_font_size = (int)(layout.screen_width * 0.02f);
-    if (stats_font_size < 14) stats_font_size = 14;
-    if (stats_font_size > 18) stats_font_size = 18;
+    int stats_font_size = (int)(layout.screen_width * 0.028f);
+    if (stats_font_size < 18) stats_font_size = 18;
+    if (stats_font_size > 24) stats_font_size = 24;
     
     int stats_width = MeasureText(level_stats, stats_font_size);
     int stats_x = (layout.screen_width - stats_width) / 2;
@@ -171,9 +171,9 @@ void ui_render_system(GameState state) {
         char level_score[100];
         sprintf(level_score, "Solved in %d guesses! Press SPACE for Level %d", 
                 state.core.guesses_this_level, state.core.current_level + 1);
-        int score_font_size = (int)(layout.screen_width * 0.025f);
-        if (score_font_size < 16) score_font_size = 16;
-        if (score_font_size > 24) score_font_size = 24;
+        int score_font_size = (int)(layout.screen_width * 0.032f);
+        if (score_font_size < 20) score_font_size = 20;
+        if (score_font_size > 28) score_font_size = 28;
         
         // Calculate completion message bar
         int completion_bar_height = success_font_size + score_font_size + 40;  // 40px padding
@@ -197,14 +197,14 @@ void ui_render_system(GameState state) {
     } else {
         // Calculate bottom bar content and dimensions
         const char* instruction = "Type a 5-letter word and press ENTER";
-        int instruction_font_size = (int)(layout.screen_width * 0.022f);
-        if (instruction_font_size < 16) instruction_font_size = 16;
-        if (instruction_font_size > 22) instruction_font_size = 22;
+        int instruction_font_size = (int)(layout.screen_width * 0.030f);
+        if (instruction_font_size < 20) instruction_font_size = 20;
+        if (instruction_font_size > 28) instruction_font_size = 28;
         
         const char* debug_instruction = "Press 1 for debug mode | 2 for letter bag | 3 for test tokens | 4-5 for settings";
-        int debug_instruction_font_size = (int)(layout.screen_width * 0.018f);
-        if (debug_instruction_font_size < 12) debug_instruction_font_size = 12;
-        if (debug_instruction_font_size > 16) debug_instruction_font_size = 16;
+        int debug_instruction_font_size = (int)(layout.screen_width * 0.024f);
+        if (debug_instruction_font_size < 16) debug_instruction_font_size = 16;
+        if (debug_instruction_font_size > 22) debug_instruction_font_size = 22;
         
         // Lifetime stats
         char lifetime_stats[150];
@@ -212,9 +212,9 @@ void ui_render_system(GameState state) {
                 state.stats.levels_completed, 
                 (state.stats.best_level_score < 999) ? state.stats.best_level_score : 0,
                 state.stats.average_guesses_per_level);
-        int lifetime_font_size = (int)(layout.screen_width * 0.018f);
-        if (lifetime_font_size < 12) lifetime_font_size = 12;
-        if (lifetime_font_size > 16) lifetime_font_size = 16;
+        int lifetime_font_size = (int)(layout.screen_width * 0.024f);
+        if (lifetime_font_size < 16) lifetime_font_size = 16;
+        if (lifetime_font_size > 22) lifetime_font_size = 22;
         
         // Letter bag text
         char letter_bag_text[300] = "";
@@ -235,9 +235,9 @@ void ui_render_system(GameState state) {
                 strcat(letter_bag_text, "No letters collected yet");
             }
             
-            bag_font_size = (int)(layout.screen_width * 0.016f);
-            if (bag_font_size < 12) bag_font_size = 12;
-            if (bag_font_size > 16) bag_font_size = 16;
+            bag_font_size = (int)(layout.screen_width * 0.022f);
+            if (bag_font_size < 16) bag_font_size = 16;
+            if (bag_font_size > 20) bag_font_size = 20;
         }
         
         // Calculate bottom bar height and position
@@ -432,21 +432,27 @@ void crossword_render_system(GameState state) {
     }
     
     
-    // Word and direction indicator at top-left of grid
+    // Word and direction indicator - positioned below grid center
     const char* direction_text = (state.crossword.cursor_direction == 0) ? "ACROSS" : "DOWN";
     char word_indicator[50];
     sprintf(word_indicator, "Word %d - %s", 
             state.crossword.current_word_index + 1, 
             direction_text);
     
-    int word_font_size = 18;
-    int word_x = grid_start_x;  // Top-left of grid
-    int word_y = grid_start_y - 40;  // Above the grid
+    int word_font_size = (int)(screen_width * 0.030f);
+    if (word_font_size < 20) word_font_size = 20;
+    if (word_font_size > 28) word_font_size = 28;
+    
+    int word_indicator_width = MeasureText(word_indicator, word_font_size);
+    int word_x = (screen_width - word_indicator_width) / 2;  // Center horizontally
+    int word_y = grid_start_y + grid_height + 20;  // Below the grid
     DrawText(word_indicator, word_x, word_y, word_font_size, (Color){200, 140, 0, 255});  // Dark yellow
     
     // Calculate bottom bar content and dimensions
     const char* instructions = "Left/Right: select word | Up/Down: navigate within word | Letters: place letters | Enter: validate word | Tab: return to Wordle";
-    int inst_font_size = 14;
+    int inst_font_size = (int)(screen_width * 0.024f);
+    if (inst_font_size < 16) inst_font_size = 16;
+    if (inst_font_size > 22) inst_font_size = 22;
     
     // Letter bag text
     char letter_bag_text[300] = "";
@@ -467,7 +473,9 @@ void crossword_render_system(GameState state) {
             strcat(letter_bag_text, "None - play Wordle to earn letters!");
         }
         
-        bag_font_size = 14;
+        bag_font_size = (int)(screen_width * 0.022f);
+        if (bag_font_size < 16) bag_font_size = 16;
+        if (bag_font_size > 20) bag_font_size = 20;
     }
     
     // Calculate bottom bar height and position
