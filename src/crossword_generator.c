@@ -5,8 +5,54 @@
 #define MAX_CROSSWORD_WORDS 10
 #define MAX_INTERSECTIONS 50
 
-// Helper function to select random unique words from WORDLE_WORDS
-int select_random_words(char selected_words[][WORD_LENGTH + 1], int count) {
+// Helper function to select words with unique starting letters
+int select_words_with_unique_starting_letters(char selected_words[][WORD_LENGTH + 1], int count) {
+    char used_letters[26] = {0}; // Track used starting letters (A-Z)
+    int selected_count = 0;
+    int total_words = get_total_words_count();
+    int attempts = 0;
+    const int max_attempts = 100; // Prevent infinite loops
+    
+    // Generate random letter sequence and find words for each letter
+    while (selected_count < count && attempts < max_attempts) {
+        char target_letter = 'A' + GetRandomValue(0, 25);
+        attempts++;
+        
+        // Skip if we've already used this letter
+        if (used_letters[target_letter - 'A']) {
+            continue;
+        }
+        
+        // Find words starting with target_letter
+        int words_with_letter[50]; // Max words per letter we'll track
+        int word_count_for_letter = 0;
+        
+        for (int i = 0; i < total_words && word_count_for_letter < 50; i++) {
+            const char* word = get_word_by_index(i);
+            if (word && word[0] == target_letter) {
+                words_with_letter[word_count_for_letter++] = i;
+            }
+        }
+        
+        // If we found words for this letter, randomly select one
+        if (word_count_for_letter > 0) {
+            int random_word_index = GetRandomValue(0, word_count_for_letter - 1);
+            int selected_word_index = words_with_letter[random_word_index];
+            
+            const char* word = get_word_by_index(selected_word_index);
+            if (word) {
+                strcpy(selected_words[selected_count], word);
+                used_letters[target_letter - 'A'] = 1;
+                selected_count++;
+            }
+        }
+    }
+    
+    return selected_count;
+}
+
+// Helper function to select random unique words from WORDLE_WORDS (fallback)
+int select_random_words_fallback(char selected_words[][WORD_LENGTH + 1], int count) {
     if (count > MAX_CROSSWORD_WORDS) {
         count = MAX_CROSSWORD_WORDS;
     }
@@ -35,6 +81,30 @@ int select_random_words(char selected_words[][WORD_LENGTH + 1], int count) {
             selected_indices[selected_count] = random_index;
             const char* word = get_word_by_index(random_index);
             strcpy(selected_words[selected_count], word);
+            selected_count++;
+        }
+    }
+    
+    return selected_count;
+}
+
+// Main function to select random words with unique starting letters (with fallback)
+int select_random_words(char selected_words[][WORD_LENGTH + 1], int count) {
+    if (count > MAX_CROSSWORD_WORDS) {
+        count = MAX_CROSSWORD_WORDS;
+    }
+    
+    // First try to select words with unique starting letters
+    int selected_count = select_words_with_unique_starting_letters(selected_words, count);
+    
+    // If we didn't get enough words with unique letters, fill remaining with fallback
+    if (selected_count < count) {
+        char remaining_words[MAX_CROSSWORD_WORDS][WORD_LENGTH + 1];
+        int remaining_count = select_random_words_fallback(remaining_words, count - selected_count);
+        
+        // Add the remaining words to our selection
+        for (int i = 0; i < remaining_count && selected_count < count; i++) {
+            strcpy(selected_words[selected_count], remaining_words[i]);
             selected_count++;
         }
     }
