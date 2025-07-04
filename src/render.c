@@ -378,17 +378,6 @@ void crossword_render_system(GameState state) {
                     DrawText(letter_string, text_x, text_y, font_size, text_color);
                 }
                 
-                // Draw directional arrow indicator on cursor position
-                if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
-                    const char* arrow = (state.crossword.cursor_direction == 0) ? "→" : "↓";
-                    int arrow_font_size = (int)(cell_size * 0.3f);
-                    
-                    // Position arrow in bottom-right corner of cell
-                    int arrow_x = cell_x + cell_size - 15;
-                    int arrow_y = cell_y + cell_size - 15;
-                    
-                    DrawText(arrow, arrow_x, arrow_y, arrow_font_size, WORDLE_WHITE);
-                }
             }
         }
     }
@@ -418,27 +407,27 @@ void crossword_render_system(GameState state) {
         DrawText(number_str, number_x, number_y, number_font_size, number_color);
     }
     
-    // Instructions with current word indicator
+    // Word and direction indicator at top-left of grid
+    const char* direction_text = (state.crossword.cursor_direction == 0) ? "ACROSS" : "DOWN";
     char word_indicator[50];
-    sprintf(word_indicator, "Current Word: %d of %d", 
+    sprintf(word_indicator, "Word %d - %s", 
             state.crossword.current_word_index + 1, 
-            state.crossword.current_level.word_count);
+            direction_text);
     
     int word_font_size = 18;
-    int word_width = MeasureText(word_indicator, word_font_size);
-    int word_x = (screen_width - word_width) / 2;
-    int word_y = grid_start_y + grid_height + 20;
+    int word_x = grid_start_x;  // Top-left of grid
+    int word_y = grid_start_y - 30;  // Above the grid
     DrawText(word_indicator, word_x, word_y, word_font_size, WORDLE_YELLOW);
     
-    // Updated instructions
+    // Position instructions near bottom of screen
     const char* instructions = "Left/Right: select word | Up/Down: navigate within word | Letters: place letters | Enter: validate word | Tab: return to Wordle";
     int inst_font_size = 14;
     int inst_width = MeasureText(instructions, inst_font_size);
     int inst_x = (screen_width - inst_width) / 2;
-    int inst_y = word_y + word_font_size + 10;
+    int inst_y = screen_height - 80;  // Near bottom of screen
     DrawText(instructions, inst_x, inst_y, inst_font_size, WORDLE_GRAY);
     
-    // Letter bag display
+    // Letter bag display above instructions
     if (state.stats.show_letter_bag) {
         char letter_bag_text[300] = "Available Letters: ";
         int bag_start_len = strlen(letter_bag_text);
@@ -458,7 +447,7 @@ void crossword_render_system(GameState state) {
         int bag_font_size = 14;
         int bag_width = MeasureText(letter_bag_text, bag_font_size);
         int bag_x = (screen_width - bag_width) / 2;
-        int bag_y = inst_y + 30;
+        int bag_y = inst_y - 25;  // Above instructions
         
         DrawText(letter_bag_text, bag_x, bag_y, bag_font_size, WORDLE_YELLOW);
     }
