@@ -5,17 +5,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 This is a Raylib-based C game project called "Crosswordle" - featuring both an infinite level-based Wordle game and a crossword puzzle mode. The Wordle mode has unlimited attempts per level and infinite progression. The crossword mode uses letter tokens earned from Wordle to solve crossword puzzles with proper Wordle-style validation. The project uses CMake for build configuration and automatically fetches Raylib 5.5 as a dependency.
 
+## Development Guidance
+- Update claude.md whenever you make changes to the codebase
+
 ## Build System
 The project uses CMake with the following structure:
 - `CMakeLists.txt`: Main build configuration
-- `main.c`: Legacy entry point (use `src/main.c` instead)
-- `src/main.c`: Current entry point with main function and game loop
+- `src/main.c`: Main entry point with game loop and system orchestration
 - `src/types.h`: All data structures, enums, and type definitions
 - `src/systems.h`: Centralized header with all function declarations
 - `src/constants.h`: Game constants and color definitions
-- `src/game.c`: Game logic system implementations
 - `src/render.c`: Rendering system implementations
 - `src/words.c`: Word database and selection implementations
+- `src/crossword_generator.c`: Crossword puzzle generation logic
 - `build/`: Generated build directory
 
 ## Common Commands
@@ -41,13 +43,15 @@ rm -rf build
 **Note**: The user handles all builds/rebuilds manually - Claude Code should not run build commands automatically.
 
 ## Architecture
-The game follows an Entity-Component-System (ECS) inspired architecture with distinct systems and proper C project structure. It features a dual-view architecture with separate game modes:
+The game follows an Entity-Component-System (ECS) inspired architecture with distinct systems and proper C project structure. It features a multi-view architecture with separate game modes organized into modular components:
 
-### Dual-View System
+### Multi-View System
+- **VIEW_HOME_SCREEN**: Main menu and game selection
 - **VIEW_WORDLE**: Traditional infinite Wordle gameplay with letter token rewards
 - **VIEW_CROSSWORD**: Crossword puzzle mode using earned letter tokens
+- **VIEW_CROSSWORD_COMPLETE**: Crossword completion screen with celebration
 - **Tab Key**: Switches between views seamlessly
-- **Shared State**: Both views use the same `GameState` struct with mode-specific substates
+- **Shared State**: All views use the same `GameState` struct with mode-specific substates
 
 ### Core Systems
 - **Input System**: Universal keyboard input handling across both views
@@ -144,21 +148,46 @@ The game uses a comprehensive `GameState` struct containing:
 - **Validation Triggering**: Crossword validation only occurs on Enter key when exactly 5 letters are placed in current direction
 - **Visual State Management**: Unvalidated letters show light grey, validated letters show proper Wordle colors
 
-### File Structure and Separation of Concerns
+### Modular Architecture Structure
+The codebase is organized into logical modules for maintainability:
+
+**Core Files:**
 - **types.h**: All data structures, enums, and type definitions (no logic)
 - **constants.h**: Game constants, colors, and configuration values
 - **systems.h**: Function declarations for all game systems (header only)
-- **game.c**: All game logic systems and state management
-- **render.c**: All rendering logic separated by view (board_render_system, crossword_render_system)
-- **words.c**: Word database and random word selection
 - **main.c**: Minimal main loop with system orchestration
+- **render.c**: All rendering logic separated by view
+- **words.c**: Word database and random word selection
+- **crossword_generator.c**: Crossword puzzle generation logic
+
+**Modular Components:**
+- **core/**: Core game state and validation systems
+  - `state.c/h`: Game state management and creation
+  - `validation.c/h`: Shared Wordle validation logic
+- **input/**: Input handling systems
+  - `input_manager.c/h`: Universal keyboard input processing
+- **ui/**: User interface systems
+  - `camera.c/h`: Camera scrolling and positioning
+  - `view_manager.c/h`: View switching and transitions
+- **wordle/**: Wordle-specific game logic
+  - `wordle_game.c/h`: Wordle mode systems and mechanics
+- **crossword/**: Crossword-specific game logic
+  - `crossword_game.c/h`: Crossword mode systems and mechanics
+  - `crossword_navigation.c/h`: Crossword cursor and navigation
+- **animation/**: Animation and visual effects
+  - `animation_system.c/h`: Core animation framework
+  - `animation_triggers.c/h`: Animation triggering logic
+  - `particle_system.c/h`: Particle effects system
 
 ### System Processing Order
 The main game loop processes systems in a specific order for each view:
-1. **Shared**: `input_system()` → `view_switching_system()`
-2. **Wordle View**: `word_editing_system()` → `word_validation_system()` → `result_display_system()` → `level_progression_system()`
-3. **Crossword View**: `crossword_input_system()` → `crossword_word_validation_system()`
-4. **Rendering**: `render_system()` (delegates to view-specific renderers)
+1. **Shared**: `input_system()` → `camera_scrolling_system()` → `view_switching_system()`
+2. **Home Screen**: `home_screen_input_system()`
+3. **Wordle View**: `word_editing_system()` → `word_validation_system()` → `result_display_system()` → `level_progression_system()` → `new_level_system()` (when needed)
+4. **Crossword View**: `crossword_input_system()` → `crossword_word_validation_system()`
+5. **Crossword Complete**: `crossword_completion_input_system()`
+6. **Animations**: `animation_update_system()` (for all views)
+7. **Rendering**: `render_system()` (delegates to view-specific renderers)
 
 ## Key Dependencies
 - Raylib 5.5 (automatically fetched if not found)
@@ -167,6 +196,14 @@ The main game loop processes systems in a specific order for each view:
 
 ## Development Notes
 - The project includes a `docs/roadmap.md` with comprehensive feature enhancement ideas
-- There's a legacy `main.c` in the root directory - use `src/main.c` instead
 - Debug mode provides useful development tools accessible via number keys 1-5
-- The architecture separates concerns cleanly: types, constants, systems, game logic, rendering, and word management
+- The architecture separates concerns cleanly with modular components for maintainability
+- Random seed is fixed at 12345 for consistent development and testing
+- The codebase has evolved from a monolithic structure to a modular architecture with clear separation of concerns
+
+## Web Build Support
+The project includes web build support via Emscripten:
+- Set `PLATFORM=Web` to build for web deployment
+- Outputs `.html`, `.js`, and `.wasm` files for browser deployment
+- Uses `build_web/` directory for web-specific builds
+- Includes proper WASM and WebGL configurations
