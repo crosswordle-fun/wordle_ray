@@ -15,6 +15,20 @@
 #define MAX_RECENT_GUESSES 20
 #define RESULT_DISPLAY_TIME 1.5f
 
+// Animation constants
+#define LETTER_REVEAL_DURATION 0.6f          // Total time for letter reveal animation
+#define LETTER_REVEAL_STAGGER 0.1f           // Delay between each letter reveal
+#define LETTER_POP_DURATION 0.25f            // Duration of letter typing pop animation
+#define LETTER_POP_SCALE 1.05f               // Scale factor for letter pop (subtle)
+#define CURSOR_PULSE_SPEED 2.0f              // Speed of cursor pulse animation
+#define WORD_COMPLETE_DURATION 1.0f          // Duration of word completion celebration
+#define LEVEL_COMPLETE_DURATION 2.0f         // Duration of level completion celebration
+#define VIEW_TRANSITION_DURATION 0.5f        // Duration of view switching animation
+#define LETTER_EASE_DURATION 0.4f            // Duration of letter ease in/out animation
+#define LETTER_EASE_SCALE 1.1f               // Scale factor for letter ease animation
+#define PARTICLE_LIFETIME 1.5f               // Lifetime of celebration particles
+#define PARTICLE_GRAVITY 200.0f              // Gravity applied to particles
+
 #define WORDLE_GREEN (Color){106, 170, 100, 255}
 #define WORDLE_YELLOW (Color){201, 180, 88, 255}
 #define WORDLE_GRAY (Color){120, 124, 126, 255}

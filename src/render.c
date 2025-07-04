@@ -73,6 +73,42 @@ void board_render_system(GameState state) {
                 letter_to_display = state.history.level_guesses[row][col];
                 text_color = WORDLE_WHITE;
                 
+            } else if (row == layout.current_input_row && state.ui.letter_revealing) {
+                // Letter reveal animation in progress - show current guess being revealed
+                float elapsed = state.ui.letter_reveal_timer;
+                float letter_reveal_time = col * LETTER_REVEAL_STAGGER;
+                
+                if (elapsed >= letter_reveal_time) {
+                    // This letter should be revealed
+                    float letter_progress = (elapsed - letter_reveal_time) / LETTER_REVEAL_STAGGER;
+                    if (letter_progress > 1.0f) letter_progress = 1.0f;
+                    
+                    // Apply flip animation effect
+                    float flip_scale = 1.0f;
+                    if (letter_progress < 0.5f) {
+                        // First half: scale down (hiding)
+                        flip_scale = 1.0f - (letter_progress * 2.0f);
+                        cell_color = WORDLE_INPUT;
+                        letter_to_display = state.history.current_guess[col];
+                        text_color = WORDLE_WHITE;
+                    } else {
+                        // Second half: scale up (revealing)
+                        flip_scale = (letter_progress - 0.5f) * 2.0f;
+                        cell_color = get_color_for_letter_state(state.history.current_guess_states[col]);
+                        letter_to_display = state.history.current_guess[col];
+                        text_color = WORDLE_WHITE;
+                    }
+                    
+                    border_color = cell_color;
+                    border_width = 0;
+                } else {
+                    // Letter not yet revealed - show as input
+                    cell_color = WORDLE_INPUT;
+                    border_color = WORDLE_DARK_GRAY;
+                    letter_to_display = state.history.current_guess[col];
+                    text_color = WORDLE_WHITE;
+                }
+                
             } else if (row == layout.current_input_row) {
                 // Current input row - only show current input since guesses are added to history immediately
                 if (state.core.play_state == GAME_STATE_INPUT && col < state.input.current_letter_pos) {
@@ -84,20 +120,98 @@ void board_render_system(GameState state) {
                 }
             }
             
-            // Draw the cell
-            DrawRectangle(cell_x, cell_y, layout.cell_size, layout.cell_size, cell_color);
+            // Draw the cell (check if we're animating this specific cell)
+            int draw_cell_x = cell_x;
+            int draw_cell_y = cell_y; 
+            int draw_cell_size = layout.cell_size;
+            
+            // Check for letter pop animation (typing feedback)
+            if (row == layout.current_input_row && 
+                state.core.play_state == GAME_STATE_INPUT && 
+                col < state.input.current_letter_pos &&
+                state.ui.letter_pop_timers[col] > 0.0f) {
+                
+                float pop_progress = 1.0f - (state.ui.letter_pop_timers[col] / LETTER_POP_DURATION);
+                float pop_scale = 1.0f + (easeInOutQuad(pop_progress) * (LETTER_POP_SCALE - 1.0f));
+                
+                draw_cell_size = (int)(layout.cell_size * pop_scale);
+                int offset = (layout.cell_size - draw_cell_size) / 2;
+                draw_cell_x = cell_x + offset;
+                draw_cell_y = cell_y + offset;
+            }
+            
+            // Check for letter ease animation (success feedback)
+            if (row < state.history.level_guess_count && state.ui.letter_easing) {
+                float ease_progress = state.ui.letter_ease_timer / LETTER_EASE_DURATION;
+                if (ease_progress <= 1.0f) {
+                    // Ease in-out animation: scale up then back down
+                    float ease_scale = 1.0f;
+                    if (ease_progress < 0.5f) {
+                        // First half: ease in (scale up)
+                        ease_scale = 1.0f + (easeInOutQuad(ease_progress * 2.0f) * (LETTER_EASE_SCALE - 1.0f));
+                    } else {
+                        // Second half: ease out (scale down)
+                        ease_scale = LETTER_EASE_SCALE - (easeInOutQuad((ease_progress - 0.5f) * 2.0f) * (LETTER_EASE_SCALE - 1.0f));
+                    }
+                    
+                    draw_cell_size = (int)(layout.cell_size * ease_scale);
+                    int offset = (layout.cell_size - draw_cell_size) / 2;
+                    draw_cell_x = cell_x + offset;
+                    draw_cell_y = cell_y + offset;
+                }
+            }
+            
+            // Check for cursor pulse animation
+            if (row == layout.current_input_row && 
+                state.core.play_state == GAME_STATE_INPUT && 
+                col == state.input.current_letter_pos &&
+                state.input.current_letter_pos < WORD_LENGTH) {
+                
+                // Add pulsing border effect for cursor
+                float pulse = (sin(state.ui.cursor_pulse_timer) + 1.0f) / 2.0f; // 0 to 1
+                int pulse_border_width = (int)(3 + pulse * 2); // 3 to 5 pixels
+                border_color = WORDLE_YELLOW;
+                border_width = pulse_border_width;
+            }
+            
+            // Check if this cell is being animated during letter reveal
+            if (row == layout.current_input_row && state.ui.letter_revealing) {
+                float elapsed = state.ui.letter_reveal_timer;
+                float letter_reveal_time = col * LETTER_REVEAL_STAGGER;
+                
+                if (elapsed >= letter_reveal_time) {
+                    float letter_progress = (elapsed - letter_reveal_time) / LETTER_REVEAL_STAGGER;
+                    if (letter_progress > 1.0f) letter_progress = 1.0f;
+                    
+                    if (letter_progress <= 1.0f) {
+                        float flip_scale = 1.0f;
+                        if (letter_progress < 0.5f) {
+                            flip_scale = 1.0f - (letter_progress * 2.0f);
+                        } else {
+                            flip_scale = (letter_progress - 0.5f) * 2.0f;
+                        }
+                        
+                        draw_cell_size = (int)(layout.cell_size * flip_scale);
+                        int offset = (layout.cell_size - draw_cell_size) / 2;
+                        draw_cell_x = cell_x + offset;
+                        draw_cell_y = cell_y + offset;
+                    }
+                }
+            }
+            
+            DrawRectangle(draw_cell_x, draw_cell_y, draw_cell_size, draw_cell_size, cell_color);
             
             if (border_width > 0) {
-                DrawRectangleLinesEx((Rectangle){cell_x, cell_y, layout.cell_size, layout.cell_size}, border_width, border_color);
+                DrawRectangleLinesEx((Rectangle){draw_cell_x, draw_cell_y, draw_cell_size, draw_cell_size}, border_width, border_color);
             }
             
             // Draw the letter
             if (letter_to_display != '\0') {
                 char letter_string[2] = {letter_to_display, '\0'};
-                int font_size = (int)(layout.cell_size * 0.45f);
+                int font_size = (int)(draw_cell_size * 0.45f);
                 int text_width = MeasureText(letter_string, font_size);
-                int text_x = cell_x + (layout.cell_size - text_width) / 2;
-                int text_y = cell_y + (layout.cell_size - font_size) / 2;
+                int text_x = draw_cell_x + (draw_cell_size - text_width) / 2;
+                int text_y = draw_cell_y + (draw_cell_size - font_size) / 2;
                 
                 DrawText(letter_string, text_x, text_y, font_size, text_color);
             }
@@ -281,6 +395,71 @@ void ui_render_system(GameState state) {
         int instruction_x = (layout.screen_width - instruction_width) / 2;
         DrawText(instruction, instruction_x, current_y, instruction_font_size, WORDLE_BLACK);
     }
+    
+    // Render celebration particles
+    for (int i = 0; i < state.ui.particle_count; i++) {
+        DrawCircleV(state.ui.particles[i], 3.0f, state.ui.particle_colors[i]);
+    }
+    
+    // Render celebration screen flash
+    if (state.ui.celebrating_level && state.ui.level_complete_timer > 0.0f) {
+        float flash_progress = 1.0f - (state.ui.level_complete_timer / LEVEL_COMPLETE_DURATION);
+        if (flash_progress < 0.3f) {
+            // Flash effect during first 30% of celebration
+            float flash_intensity = (0.3f - flash_progress) / 0.3f;
+            Color flash_color = {255, 255, 255, (unsigned char)(flash_intensity * 100)};
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), flash_color);
+        }
+    }
+    
+    // Render word completion celebration text
+    if (state.ui.celebrating_word && state.ui.word_complete_timer > 0.0f) {
+        const char* celebration_text = "CORRECT!";
+        int celebration_font_size = 48;
+        int text_width = MeasureText(celebration_text, celebration_font_size);
+        int text_x = (GetScreenWidth() - text_width) / 2;
+        int text_y = GetScreenHeight() / 2 - 100;
+        
+        // Animate text size and fade
+        float celebration_progress = 1.0f - (state.ui.word_complete_timer / WORD_COMPLETE_DURATION);
+        float scale = easeOutElastic(celebration_progress);
+        int animated_font_size = (int)(celebration_font_size * scale);
+        float alpha = 1.0f - celebration_progress;
+        
+        Color text_color = WORDLE_GREEN;
+        text_color.a = (unsigned char)(255 * alpha);
+        
+        // Recalculate position with animated size
+        text_width = MeasureText(celebration_text, animated_font_size);
+        text_x = (GetScreenWidth() - text_width) / 2;
+        
+        DrawText(celebration_text, text_x, text_y, animated_font_size, text_color);
+    }
+    
+    // Render level completion celebration text
+    if (state.ui.celebrating_level && state.ui.level_complete_timer > 0.0f) {
+        char level_text[50];
+        sprintf(level_text, "LEVEL %d COMPLETE!", state.core.current_level);
+        int level_font_size = 36;
+        int text_width = MeasureText(level_text, level_font_size);
+        int text_x = (GetScreenWidth() - text_width) / 2;
+        int text_y = GetScreenHeight() / 2 - 50;
+        
+        // Animate text with bounce effect
+        float celebration_progress = 1.0f - (state.ui.level_complete_timer / LEVEL_COMPLETE_DURATION);
+        float bounce = sin(celebration_progress * 3.14159f * 4) * 0.1f + 1.0f;
+        int animated_font_size = (int)(level_font_size * bounce);
+        float alpha = celebration_progress < 0.8f ? 1.0f : (0.8f - (celebration_progress - 0.8f)) / 0.2f;
+        
+        Color text_color = WORDLE_YELLOW;
+        text_color.a = (unsigned char)(255 * alpha);
+        
+        // Recalculate position with animated size
+        text_width = MeasureText(level_text, animated_font_size);
+        text_x = (GetScreenWidth() - text_width) / 2;
+        
+        DrawText(level_text, text_x, text_y, animated_font_size, text_color);
+    }
 }
 
 void crossword_render_system(GameState state) {
@@ -386,8 +565,33 @@ void crossword_render_system(GameState state) {
             }
             
             // Draw cell
-            DrawRectangle(cell_x, cell_y, cell_size, cell_size, cell_color);
-            DrawRectangleLinesEx((Rectangle){cell_x, cell_y, cell_size, cell_size}, border_width, border_color);
+            // Apply letter ease animation for crossword cells
+            int draw_cell_x = cell_x;
+            int draw_cell_y = cell_y;
+            int draw_cell_size = cell_size;
+            
+            if (is_word_cell && state.crossword.word_validated[x][y] && state.ui.letter_easing) {
+                float ease_progress = state.ui.letter_ease_timer / LETTER_EASE_DURATION;
+                if (ease_progress <= 1.0f) {
+                    // Ease in-out animation: scale up then back down
+                    float ease_scale = 1.0f;
+                    if (ease_progress < 0.5f) {
+                        // First half: ease in (scale up)
+                        ease_scale = 1.0f + (easeInOutQuad(ease_progress * 2.0f) * (LETTER_EASE_SCALE - 1.0f));
+                    } else {
+                        // Second half: ease out (scale down)
+                        ease_scale = LETTER_EASE_SCALE - (easeInOutQuad((ease_progress - 0.5f) * 2.0f) * (LETTER_EASE_SCALE - 1.0f));
+                    }
+                    
+                    draw_cell_size = (int)(cell_size * ease_scale);
+                    int offset = (cell_size - draw_cell_size) / 2;
+                    draw_cell_x = cell_x + offset;
+                    draw_cell_y = cell_y + offset;
+                }
+            }
+            
+            DrawRectangle(draw_cell_x, draw_cell_y, draw_cell_size, draw_cell_size, cell_color);
+            DrawRectangleLinesEx((Rectangle){draw_cell_x, draw_cell_y, draw_cell_size, draw_cell_size}, border_width, border_color);
             
             // Draw letter if present (only in word cells)
             if (is_word_cell) {
@@ -419,10 +623,10 @@ void crossword_render_system(GameState state) {
                 // Draw the letter if we have one to display
                 if (letter_to_display != '\0') {
                     char letter_string[2] = {letter_to_display, '\0'};
-                    int font_size = (int)(cell_size * 0.6f);
+                    int font_size = (int)(draw_cell_size * 0.6f);
                     int text_width = MeasureText(letter_string, font_size);
-                    int text_x = cell_x + (cell_size - text_width) / 2;
-                    int text_y = cell_y + (cell_size - font_size) / 2;
+                    int text_x = draw_cell_x + (draw_cell_size - text_width) / 2;
+                    int text_y = draw_cell_y + (draw_cell_size - font_size) / 2;
                     
                     DrawText(letter_string, text_x, text_y, font_size, text_color);
                 }

@@ -32,6 +32,11 @@ add_executable(${PROJECT_NAME}
 #set(raylib_VERBOSE 1)
 target_link_libraries(${PROJECT_NAME} raylib)
 
+# Link math library on Unix systems
+if(UNIX AND NOT APPLE)
+    target_link_libraries(${PROJECT_NAME} m)
+endif()
+
 # Checks if OSX and links appropriate frameworks (Only required on MacOS)
 if (APPLE)
     target_link_libraries(${PROJECT_NAME} "-framework IOKit")

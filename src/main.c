@@ -32,6 +32,9 @@ int main(void) {
             state = crossword_completion_input_system(state);
         }
         
+        // Update animations for all views
+        state = animation_update_system(state);
+        
         BeginDrawing();
         render_system(state);
         EndDrawing();

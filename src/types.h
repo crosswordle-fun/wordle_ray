@@ -79,6 +79,28 @@ typedef struct {
     int show_statistics;
     int show_help;
     int animate_letters;
+    
+    // Animation timers and states
+    float letter_pop_timers[WORD_LENGTH];     // Per-letter typing animation timers
+    float cursor_pulse_timer;                 // Cursor blinking animation
+    float word_complete_timer;                // Word completion celebration timer
+    float level_complete_timer;               // Level completion celebration timer
+    float view_transition_timer;              // View switching animation timer
+    float letter_ease_timer;                  // Letter ease in/out animation timer
+    
+    // Animation states
+    int letter_revealing;                     // Flag for letter reveal animation in progress
+    int celebrating_word;                     // Flag for word completion celebration
+    int celebrating_level;                    // Flag for level completion celebration
+    int transitioning_view;                   // Flag for view transition in progress
+    int letter_easing;                        // Flag for letter ease animation in progress
+    
+    // Particle effects
+    int particle_count;                       // Number of active particles
+    Vector2 particles[50];                    // Particle positions (max 50)
+    Vector2 particle_velocities[50];          // Particle velocities
+    float particle_lifetimes[50];             // Particle remaining lifetimes
+    Color particle_colors[50];                // Particle colors
 } UIState;
 
 typedef struct {

@@ -1,4 +1,5 @@
 #include "systems.h"
+#include <math.h>
 
 GameState create_game_state(const char* target_word) {
     GameState state = {0};
@@ -40,6 +41,30 @@ GameState create_game_state(const char* target_word) {
     state.ui.show_statistics = 0;
     state.ui.show_help = 0;
     state.ui.animate_letters = 0;
+    
+    // Initialize new animation timers and states
+    for (int i = 0; i < WORD_LENGTH; i++) {
+        state.ui.letter_pop_timers[i] = 0.0f;
+    }
+    state.ui.cursor_pulse_timer = 0.0f;
+    state.ui.word_complete_timer = 0.0f;
+    state.ui.level_complete_timer = 0.0f;
+    state.ui.view_transition_timer = 0.0f;
+    state.ui.letter_ease_timer = 0.0f;
+    
+    state.ui.letter_revealing = 0;
+    state.ui.celebrating_word = 0;
+    state.ui.celebrating_level = 0;
+    state.ui.transitioning_view = 0;
+    state.ui.letter_easing = 0;
+    
+    state.ui.particle_count = 0;
+    for (int i = 0; i < 50; i++) {
+        state.ui.particles[i] = (Vector2){0, 0};
+        state.ui.particle_velocities[i] = (Vector2){0, 0};
+        state.ui.particle_lifetimes[i] = 0.0f;
+        state.ui.particle_colors[i] = WHITE;
+    }
     
     state.system.frame_time = 0.0;
     state.system.debug_mode = 0;
@@ -145,7 +170,7 @@ GameState input_system(GameState state) {
     
     // Smooth camera interpolation toward target (only when not paused)
     if (!state.system.auto_center_paused) {
-        float camera_lerp_speed = 8.0f;
+        float camera_lerp_speed = 4.0f;  // Reduced for smoother movement
         state.system.camera_offset_y += (state.system.target_camera_offset_y - state.system.camera_offset_y) * camera_lerp_speed * state.system.frame_time;
     }
     
@@ -182,9 +207,13 @@ GameState word_editing_system(GameState state) {
     }
     
     if (state.system.letter_pressed && state.input.current_letter_pos < WORD_LENGTH) {
+        int letter_index = state.input.current_letter_pos;
         state.input.current_word[state.input.current_letter_pos] = toupper(state.system.pressed_letter);
         state.input.current_letter_pos++;
         state.input.current_word[state.input.current_letter_pos] = '\0';
+        
+        // Trigger letter pop animation
+        trigger_letter_pop(&state, letter_index);
         
         // User started typing - reactivate auto-centering
         if (state.system.user_has_scrolled) {
@@ -340,55 +369,14 @@ GameState word_validation_system(GameState state) {
             );
     }
     
-    // Update counters
-    state.core.guesses_this_level++;
-    state.core.total_lifetime_guesses++;
-    state.stats.total_guesses++;
-    
-    // Add this guess to level history immediately
-    if (state.history.level_guess_count < MAX_RECENT_GUESSES) {
-        strcpy(state.history.level_guesses[state.history.level_guess_count], state.input.current_word);
-        for (int i = 0; i < WORD_LENGTH; i++) {
-            state.history.level_letter_states[state.history.level_guess_count][i] = state.history.current_guess_states[i];
-        }
-        state.history.level_guess_count++;
-    }
-    
-    // Check if level is complete
-    if (check_word_match(state.input.current_word, state.core.target_word)) {
-        // Award a random letter token from the solved word (only happens once per level)
-        int random_letter_index = rand() % WORD_LENGTH;
-        char awarded_letter = state.core.target_word[random_letter_index];
-        int letter_array_index = awarded_letter - 'A';  // Convert A-Z to 0-25
-        state.stats.letter_counts[letter_array_index]++;
-        
-        // Update statistics (only happens once per level completion)
-        state.stats.levels_completed++;
-        state.stats.current_level_streak++;
-        if (state.stats.current_level_streak > state.stats.max_level_streak) {
-            state.stats.max_level_streak = state.stats.current_level_streak;
-        }
-        
-        // Update best score if this level was solved with fewer guesses
-        if (state.core.guesses_this_level < state.stats.best_level_score) {
-            state.stats.best_level_score = state.core.guesses_this_level;
-        }
-        
-        // Calculate average guesses per level
-        if (state.stats.levels_completed > 0) {
-            state.stats.average_guesses_per_level = 
-                (float)state.stats.total_guesses / (float)state.stats.levels_completed;
-        }
-        
-        state.core.level_complete = 1;
-        state.core.play_state = GAME_STATE_LEVEL_COMPLETE;
+    // Start letter reveal animation if animations are enabled
+    if (state.settings.animations_enabled) {
+        state.ui.letter_revealing = 1;
+        state.ui.letter_reveal_timer = 0.0f;
+        state.core.play_state = GAME_STATE_SHOWING_RESULT;
     } else {
-        // Return to input state immediately for next guess
-        state.core.play_state = GAME_STATE_INPUT;
-        // Reset camera to center on new input row (only if not paused)
-        if (!state.system.auto_center_paused) {
-            state.system.target_camera_offset_y = 0.0f;
-        }
+        // No animation - complete validation immediately
+        complete_word_validation(&state);
     }
     
     // Clear input for next guess
@@ -398,6 +386,65 @@ GameState word_validation_system(GameState state) {
     state.input.should_submit = 0;
     
     return state;
+}
+
+// Helper function to complete word validation (called after animation or immediately)
+void complete_word_validation(GameState* state) {
+    // Update counters
+    state->core.guesses_this_level++;
+    state->core.total_lifetime_guesses++;
+    state->stats.total_guesses++;
+    
+    // Add this guess to level history
+    if (state->history.level_guess_count < MAX_RECENT_GUESSES) {
+        strcpy(state->history.level_guesses[state->history.level_guess_count], state->history.current_guess);
+        for (int i = 0; i < WORD_LENGTH; i++) {
+            state->history.level_letter_states[state->history.level_guess_count][i] = state->history.current_guess_states[i];
+        }
+        state->history.level_guess_count++;
+    }
+    
+    // Check if level is complete
+    if (check_word_match(state->history.current_guess, state->core.target_word)) {
+        // Award a random letter token from the solved word (only happens once per level)
+        int random_letter_index = rand() % WORD_LENGTH;
+        char awarded_letter = state->core.target_word[random_letter_index];
+        int letter_array_index = awarded_letter - 'A';  // Convert A-Z to 0-25
+        state->stats.letter_counts[letter_array_index]++;
+        
+        // Update statistics (only happens once per level completion)
+        state->stats.levels_completed++;
+        state->stats.current_level_streak++;
+        if (state->stats.current_level_streak > state->stats.max_level_streak) {
+            state->stats.max_level_streak = state->stats.current_level_streak;
+        }
+        
+        // Update best score if this level was solved with fewer guesses
+        if (state->core.guesses_this_level < state->stats.best_level_score) {
+            state->stats.best_level_score = state->core.guesses_this_level;
+        }
+        
+        // Calculate average guesses per level
+        if (state->stats.levels_completed > 0) {
+            state->stats.average_guesses_per_level = 
+                (float)state->stats.total_guesses / (float)state->stats.levels_completed;
+        }
+        
+        state->core.level_complete = 1;
+        state->core.play_state = GAME_STATE_LEVEL_COMPLETE;
+        
+        // Trigger celebration animations
+        trigger_word_celebration(state);
+        trigger_level_celebration(state);
+        trigger_letter_ease(state);
+    } else {
+        // Return to input state for next guess
+        state->core.play_state = GAME_STATE_INPUT;
+        // Reset camera to center on new input row (only if not paused)
+        if (!state->system.auto_center_paused) {
+            state->system.target_camera_offset_y = 0.0f;
+        }
+    }
 }
 
 GameState result_display_system(GameState state) {
@@ -779,6 +826,9 @@ GameState crossword_word_validation_system(GameState state) {
                 }
             }
             
+            // Trigger letter ease animation for all validated words
+            trigger_letter_ease(&state);
+            
             if (word_correct) {
                 // Word is correct - mark completion and provide feedback
                 printf("Word '%s' is correct!\n", current_word);
@@ -921,4 +971,176 @@ GameState crossword_completion_input_system(GameState state) {
     }
     
     return state;
+}
+
+// ============= ANIMATION SYSTEM FUNCTIONS =============
+
+GameState animation_update_system(GameState state) {
+    if (!state.settings.animations_enabled) {
+        return state;
+    }
+    
+    float frame_time = (float)state.system.frame_time;
+    
+    // Update letter pop animations
+    for (int i = 0; i < WORD_LENGTH; i++) {
+        if (state.ui.letter_pop_timers[i] > 0.0f) {
+            state.ui.letter_pop_timers[i] -= frame_time;
+            if (state.ui.letter_pop_timers[i] < 0.0f) {
+                state.ui.letter_pop_timers[i] = 0.0f;
+            }
+        }
+    }
+    
+    // Update cursor pulse
+    state.ui.cursor_pulse_timer += frame_time * CURSOR_PULSE_SPEED;
+    if (state.ui.cursor_pulse_timer > 6.28318530718f) { // 2 * PI
+        state.ui.cursor_pulse_timer -= 6.28318530718f;
+    }
+    
+    // Update word celebration
+    if (state.ui.celebrating_word) {
+        state.ui.word_complete_timer -= frame_time;
+        if (state.ui.word_complete_timer <= 0.0f) {
+            state.ui.celebrating_word = 0;
+            state.ui.word_complete_timer = 0.0f;
+        }
+    }
+    
+    // Update level celebration
+    if (state.ui.celebrating_level) {
+        state.ui.level_complete_timer -= frame_time;
+        if (state.ui.level_complete_timer <= 0.0f) {
+            state.ui.celebrating_level = 0;
+            state.ui.level_complete_timer = 0.0f;
+        }
+    }
+    
+    // Update letter ease animation
+    if (state.ui.letter_easing) {
+        state.ui.letter_ease_timer += frame_time;
+        if (state.ui.letter_ease_timer >= LETTER_EASE_DURATION) {
+            state.ui.letter_easing = 0;
+            state.ui.letter_ease_timer = 0.0f;
+        }
+    }
+    
+    // Update letter reveal animation
+    if (state.ui.letter_revealing) {
+        state.ui.letter_reveal_timer += frame_time;
+        if (state.ui.letter_reveal_timer >= LETTER_REVEAL_DURATION) {
+            state.ui.letter_revealing = 0;
+            state.ui.letter_reveal_timer = 0.0f;
+            // Complete word validation after animation finishes
+            complete_word_validation(&state);
+        }
+    }
+    
+    // Update particles
+    update_particles(&state, frame_time);
+    
+    return state;
+}
+
+float easeInOutQuad(float t) {
+    return t < 0.5f ? 2.0f * t * t : 1.0f - 2.0f * (1.0f - t) * (1.0f - t);
+}
+
+float easeOutElastic(float t) {
+    const float c4 = (2.0f * 3.14159265359f) / 3.0f;
+    return t == 0.0f ? 0.0f : t == 1.0f ? 1.0f : 
+           pow(2.0f, -10.0f * t) * sin((t * 10.0f - 0.75f) * c4) + 1.0f;
+}
+
+void trigger_letter_pop(GameState* state, int letter_index) {
+    if (!state->settings.animations_enabled || letter_index < 0 || letter_index >= WORD_LENGTH) {
+        return;
+    }
+    state->ui.letter_pop_timers[letter_index] = LETTER_POP_DURATION;
+}
+
+void trigger_word_celebration(GameState* state) {
+    if (!state->settings.animations_enabled) {
+        return;
+    }
+    state->ui.celebrating_word = 1;
+    state->ui.word_complete_timer = WORD_COMPLETE_DURATION;
+    
+    // Spawn celebration particles at center of screen
+    Vector2 center = {(float)GetScreenWidth() / 2.0f, (float)GetScreenHeight() / 2.0f};
+    spawn_particles(state, center, WORDLE_GREEN, 20);
+}
+
+void trigger_level_celebration(GameState* state) {
+    if (!state->settings.animations_enabled) {
+        return;
+    }
+    state->ui.celebrating_level = 1;
+    state->ui.level_complete_timer = LEVEL_COMPLETE_DURATION;
+    
+    // Spawn more particles for level completion
+    Vector2 center = {(float)GetScreenWidth() / 2.0f, (float)GetScreenHeight() / 2.0f};
+    spawn_particles(state, center, WORDLE_YELLOW, 30);
+    spawn_particles(state, center, WORDLE_GREEN, 20);
+}
+
+void trigger_letter_ease(GameState* state) {
+    if (!state->settings.animations_enabled) {
+        return;
+    }
+    state->ui.letter_easing = 1;
+    state->ui.letter_ease_timer = 0.0f;
+}
+
+void spawn_particles(GameState* state, Vector2 position, Color color, int count) {
+    if (!state->settings.animations_enabled) {
+        return;
+    }
+    
+    for (int i = 0; i < count && state->ui.particle_count < 50; i++) {
+        int index = state->ui.particle_count;
+        state->ui.particles[index] = position;
+        
+        // Random velocity
+        float angle = (float)(rand() % 360) * 3.14159265359f / 180.0f;
+        float speed = 50.0f + (float)(rand() % 100);
+        state->ui.particle_velocities[index] = (Vector2){
+            cos(angle) * speed,
+            sin(angle) * speed - 100.0f // Initial upward bias
+        };
+        
+        state->ui.particle_lifetimes[index] = PARTICLE_LIFETIME;
+        state->ui.particle_colors[index] = color;
+        state->ui.particle_count++;
+    }
+}
+
+void update_particles(GameState* state, float frame_time) {
+    for (int i = 0; i < state->ui.particle_count; i++) {
+        state->ui.particle_lifetimes[i] -= frame_time;
+        
+        if (state->ui.particle_lifetimes[i] <= 0.0f) {
+            // Remove particle by swapping with last particle
+            state->ui.particle_count--;
+            if (i < state->ui.particle_count) {
+                state->ui.particles[i] = state->ui.particles[state->ui.particle_count];
+                state->ui.particle_velocities[i] = state->ui.particle_velocities[state->ui.particle_count];
+                state->ui.particle_lifetimes[i] = state->ui.particle_lifetimes[state->ui.particle_count];
+                state->ui.particle_colors[i] = state->ui.particle_colors[state->ui.particle_count];
+                i--; // Check this particle again
+            }
+            continue;
+        }
+        
+        // Update position
+        state->ui.particles[i].x += state->ui.particle_velocities[i].x * frame_time;
+        state->ui.particles[i].y += state->ui.particle_velocities[i].y * frame_time;
+        
+        // Apply gravity
+        state->ui.particle_velocities[i].y += PARTICLE_GRAVITY * frame_time;
+        
+        // Fade particle
+        float life_ratio = state->ui.particle_lifetimes[i] / PARTICLE_LIFETIME;
+        state->ui.particle_colors[i].a = (unsigned char)(255 * life_ratio);
+    }
 }

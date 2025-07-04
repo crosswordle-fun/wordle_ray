@@ -35,6 +35,18 @@ int find_first_editable_cell_in_word(GameState state, int word_index, int* out_x
 int find_next_incomplete_word(GameState state);
 int find_previous_editable_cell_with_letter(GameState state, int current_x, int current_y, int* out_x, int* out_y);
 
+// Animation System Function Declarations
+GameState animation_update_system(GameState state);
+float easeInOutQuad(float t);
+float easeOutElastic(float t);
+void trigger_letter_pop(GameState* state, int letter_index);
+void trigger_word_celebration(GameState* state);
+void trigger_level_celebration(GameState* state);
+void trigger_letter_ease(GameState* state);
+void spawn_particles(GameState* state, Vector2 position, Color color, int count);
+void update_particles(GameState* state, float frame_time);
+void complete_word_validation(GameState* state);
+
 // Rendering System Function Declarations
 LayoutConfig calculate_layout(GameState state);
 Color get_color_for_letter_state(LetterState state);
