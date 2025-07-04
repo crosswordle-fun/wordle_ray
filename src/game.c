@@ -407,7 +407,7 @@ void complete_word_validation(GameState* state) {
     // Check if level is complete
     if (check_word_match(state->history.current_guess, state->core.target_word)) {
         // Award a random letter token from the solved word (only happens once per level)
-        int random_letter_index = rand() % WORD_LENGTH;
+        int random_letter_index = GetRandomValue(0, WORD_LENGTH - 1);
         char awarded_letter = state->core.target_word[random_letter_index];
         int letter_array_index = awarded_letter - 'A';  // Convert A-Z to 0-25
         state->stats.letter_counts[letter_array_index]++;
@@ -1102,8 +1102,8 @@ void spawn_particles(GameState* state, Vector2 position, Color color, int count)
         state->ui.particles[index] = position;
         
         // Random velocity
-        float angle = (float)(rand() % 360) * 3.14159265359f / 180.0f;
-        float speed = 50.0f + (float)(rand() % 100);
+        float angle = (float)GetRandomValue(0, 359) * 3.14159265359f / 180.0f;
+        float speed = 50.0f + (float)GetRandomValue(0, 99);
         state->ui.particle_velocities[index] = (Vector2){
             cos(angle) * speed,
             sin(angle) * speed - 100.0f // Initial upward bias

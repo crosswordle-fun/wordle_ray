@@ -6,6 +6,9 @@ int main(void) {
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetWindowMinSize(400, 300);
     
+    // Set random seed for consistent word selection across runs
+    SetRandomSeed(12345);
+    
     GameState state = create_game_state("");
     
     while (!WindowShouldClose()) {

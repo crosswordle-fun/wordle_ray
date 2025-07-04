@@ -25,16 +25,7 @@ static const char* WORDLE_WORDS[] = {
 
 #define TOTAL_WORDS (sizeof(WORDLE_WORDS) / sizeof(WORDLE_WORDS[0]))
 
-void initialize_random_seed(void) {
-    static int is_initialized = 0;
-    if (!is_initialized) {
-        srand(time(NULL));
-        is_initialized = 1;
-    }
-}
-
 const char* get_random_word(void) {
-    initialize_random_seed();
-    int random_index = rand() % TOTAL_WORDS;
+    int random_index = GetRandomValue(0, TOTAL_WORDS - 1);
     return WORDLE_WORDS[random_index];
 }
