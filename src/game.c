@@ -365,11 +365,31 @@ GameState crossword_input_system(GameState state) {
             state.crossword.current_word_index = state.crossword.current_level.word_count - 1;
         }
         
-        // Set cursor to start of selected word
+        // Set cursor to first editable position in selected word
         CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
-        state.crossword.cursor_x = current_word->start_x;
-        state.crossword.cursor_y = current_word->start_y;
         state.crossword.cursor_direction = current_word->direction;
+        
+        // Find first non-green (editable) cell in word
+        int found_editable = 0;
+        for (int i = 0; i < current_word->length; i++) {
+            int check_x = current_word->start_x + (current_word->direction == 0 ? i : 0);
+            int check_y = current_word->start_y + (current_word->direction == 1 ? i : 0);
+            
+            // Check if this position is NOT green (available for editing)
+            if (!(state.crossword.word_validated[check_x][check_y] && 
+                  state.crossword.letter_states[check_x][check_y] == LETTER_CORRECT)) {
+                state.crossword.cursor_x = check_x;
+                state.crossword.cursor_y = check_y;
+                found_editable = 1;
+                break;
+            }
+        }
+        
+        // If no editable cell found, position at start anyway
+        if (!found_editable) {
+            state.crossword.cursor_x = current_word->start_x;
+            state.crossword.cursor_y = current_word->start_y;
+        }
     }
     if (IsKeyPressed(KEY_RIGHT)) {
         // Next word (cycle forwards)
@@ -378,30 +398,72 @@ GameState crossword_input_system(GameState state) {
             state.crossword.current_word_index = 0;
         }
         
-        // Set cursor to start of selected word
+        // Set cursor to first editable position in selected word
         CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
-        state.crossword.cursor_x = current_word->start_x;
-        state.crossword.cursor_y = current_word->start_y;
         state.crossword.cursor_direction = current_word->direction;
+        
+        // Find first non-green (editable) cell in word
+        int found_editable = 0;
+        for (int i = 0; i < current_word->length; i++) {
+            int check_x = current_word->start_x + (current_word->direction == 0 ? i : 0);
+            int check_y = current_word->start_y + (current_word->direction == 1 ? i : 0);
+            
+            // Check if this position is NOT green (available for editing)
+            if (!(state.crossword.word_validated[check_x][check_y] && 
+                  state.crossword.letter_states[check_x][check_y] == LETTER_CORRECT)) {
+                state.crossword.cursor_x = check_x;
+                state.crossword.cursor_y = check_y;
+                found_editable = 1;
+                break;
+            }
+        }
+        
+        // If no editable cell found, position at start anyway
+        if (!found_editable) {
+            state.crossword.cursor_x = current_word->start_x;
+            state.crossword.cursor_y = current_word->start_y;
+        }
     }
     
-    // Up/Down arrow keys navigate within current word only
+    // Up/Down arrow keys navigate within current word only, skipping green cells
     CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
     if (state.system.up_arrow_pressed) {
         if (current_word->direction == 1) { // vertical word
-            int new_y = state.crossword.cursor_y - 1;
-            if (new_y >= current_word->start_y && 
-                state.crossword.current_level.word_mask[state.crossword.cursor_x][new_y]) {
-                state.crossword.cursor_y = new_y;
+            // Search backwards for next non-green cell
+            for (int i = 1; i <= current_word->length; i++) {
+                int new_y = state.crossword.cursor_y - i;
+                if (new_y >= current_word->start_y && 
+                    state.crossword.current_level.word_mask[state.crossword.cursor_x][new_y]) {
+                    
+                    // Check if this position is NOT green (available for editing)
+                    if (!(state.crossword.word_validated[state.crossword.cursor_x][new_y] && 
+                          state.crossword.letter_states[state.crossword.cursor_x][new_y] == LETTER_CORRECT)) {
+                        state.crossword.cursor_y = new_y;
+                        break;
+                    }
+                } else {
+                    break; // Reached start of word
+                }
             }
         }
     }
     if (state.system.down_arrow_pressed) {
         if (current_word->direction == 1) { // vertical word
-            int new_y = state.crossword.cursor_y + 1;
-            if (new_y < current_word->start_y + current_word->length && 
-                state.crossword.current_level.word_mask[state.crossword.cursor_x][new_y]) {
-                state.crossword.cursor_y = new_y;
+            // Search forwards for next non-green cell
+            for (int i = 1; i <= current_word->length; i++) {
+                int new_y = state.crossword.cursor_y + i;
+                if (new_y < current_word->start_y + current_word->length && 
+                    state.crossword.current_level.word_mask[state.crossword.cursor_x][new_y]) {
+                    
+                    // Check if this position is NOT green (available for editing)
+                    if (!(state.crossword.word_validated[state.crossword.cursor_x][new_y] && 
+                          state.crossword.letter_states[state.crossword.cursor_x][new_y] == LETTER_CORRECT)) {
+                        state.crossword.cursor_y = new_y;
+                        break;
+                    }
+                } else {
+                    break; // Reached end of word
+                }
             }
         }
     }
@@ -410,6 +472,13 @@ GameState crossword_input_system(GameState state) {
     if (state.system.letter_pressed) {
         // Check if current position is a word cell
         if (state.crossword.current_level.word_mask[state.crossword.cursor_x][state.crossword.cursor_y]) {
+            // Check if current position is locked (green letter)
+            if (state.crossword.word_validated[state.crossword.cursor_x][state.crossword.cursor_y] && 
+                state.crossword.letter_states[state.crossword.cursor_x][state.crossword.cursor_y] == LETTER_CORRECT) {
+                // This cell is locked, prevent modification
+                return state;
+            }
+            
             char letter = state.system.pressed_letter;
             int letter_index = letter - 'A';
             
@@ -426,27 +495,42 @@ GameState crossword_input_system(GameState state) {
                 state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = letter;
                 state.stats.letter_counts[letter_index]--;
                 
-                // Auto-advance cursor within current word
+                // Auto-advance cursor within current word, skipping green cells
                 CrosswordWord* word = &state.crossword.current_level.words[state.crossword.current_word_index];
                 int next_x = state.crossword.cursor_x;
                 int next_y = state.crossword.cursor_y;
                 
-                if (word->direction == 0) {
-                    // Horizontal: move right
-                    next_x++;
-                } else {
-                    // Vertical: move down
-                    next_y++;
-                }
-                
-                // Check if next position is within current word bounds
-                if ((word->direction == 0 && next_x < word->start_x + word->length) ||
-                    (word->direction == 1 && next_y < word->start_y + word->length)) {
+                // Keep advancing until we find a non-green cell or reach the end
+                for (int i = 1; i < word->length; i++) {
+                    if (word->direction == 0) {
+                        // Horizontal: move right
+                        next_x = state.crossword.cursor_x + i;
+                        next_y = state.crossword.cursor_y;
+                    } else {
+                        // Vertical: move down
+                        next_x = state.crossword.cursor_x;
+                        next_y = state.crossword.cursor_y + i;
+                    }
                     
-                    if (next_x < 9 && next_y < 9 && 
-                        state.crossword.current_level.word_mask[next_x][next_y]) {
-                        state.crossword.cursor_x = next_x;
-                        state.crossword.cursor_y = next_y;
+                    // Check if position is within current word bounds and valid
+                    if ((word->direction == 0 && next_x < word->start_x + word->length) ||
+                        (word->direction == 1 && next_y < word->start_y + word->length)) {
+                        
+                        if (next_x < 9 && next_y < 9 && 
+                            state.crossword.current_level.word_mask[next_x][next_y]) {
+                            
+                            // Check if this position is NOT green (available for editing)
+                            if (!(state.crossword.word_validated[next_x][next_y] && 
+                                  state.crossword.letter_states[next_x][next_y] == LETTER_CORRECT)) {
+                                // Found an available position, move cursor here
+                                state.crossword.cursor_x = next_x;
+                                state.crossword.cursor_y = next_y;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Reached end of word, stop searching
+                        break;
                     }
                 }
             }
@@ -459,6 +543,13 @@ GameState crossword_input_system(GameState state) {
         if (state.crossword.current_level.word_mask[state.crossword.cursor_x][state.crossword.cursor_y]) {
             char existing_letter = state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y];
             if (existing_letter != '\0') {
+                // Check if current position is locked (green letter)
+                if (state.crossword.word_validated[state.crossword.cursor_x][state.crossword.cursor_y] && 
+                    state.crossword.letter_states[state.crossword.cursor_x][state.crossword.cursor_y] == LETTER_CORRECT) {
+                    // This cell is locked, prevent deletion
+                    return state;
+                }
+                
                 // Remove letter at current position
                 int existing_index = existing_letter - 'A';
                 state.stats.letter_counts[existing_index]++;
@@ -486,6 +577,13 @@ GameState crossword_input_system(GameState state) {
                         
                         char prev_letter = state.crossword.grid[prev_x][prev_y];
                         if (prev_letter != '\0') {
+                            // Check if previous position is locked (green letter)
+                            if (state.crossword.word_validated[prev_x][prev_y] && 
+                                state.crossword.letter_states[prev_x][prev_y] == LETTER_CORRECT) {
+                                // This cell is locked, prevent deletion
+                                return state;
+                            }
+                            
                             // Remove letter at previous position
                             int prev_index = prev_letter - 'A';
                             state.stats.letter_counts[prev_index]++;

@@ -326,11 +326,15 @@ void crossword_render_system(GameState state) {
                     cell_color = (Color){240, 240, 240, 255};  // Very light gray
                 }
                 
-                // Highlight cursor position (only in word cells)
+                // Highlight cursor position (only in word cells, not on green letters)
                 if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
-                    if (placed_letter == '\0' || !state.crossword.word_validated[x][y]) {
+                    // Only show yellow cursor on non-green cells
+                    if ((placed_letter == '\0' || !state.crossword.word_validated[x][y]) ||
+                        (state.crossword.word_validated[x][y] && 
+                         state.crossword.letter_states[x][y] != LETTER_CORRECT)) {
                         cell_color = WORDLE_YELLOW;  // Cursor highlight
                     }
+                    // Always show white border on cursor position (even on green)
                     border_color = WORDLE_WHITE;
                     border_width = 3;
                 }
