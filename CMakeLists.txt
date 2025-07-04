@@ -25,10 +25,26 @@ endif()
 
 add_executable(${PROJECT_NAME} 
     src/main.c
-    src/game.c
     src/render.c
     src/words.c
     src/crossword_generator.c
+    # Core modules
+    src/core/state.c
+    src/core/validation.c
+    # Input modules
+    src/input/input_manager.c
+    # UI modules
+    src/ui/camera.c
+    src/ui/view_manager.c
+    # Wordle modules
+    src/wordle/wordle_game.c
+    # Crossword modules
+    src/crossword/crossword_game.c
+    src/crossword/crossword_navigation.c
+    # Animation modules
+    src/animation/animation_system.c
+    src/animation/animation_triggers.c
+    src/animation/particle_system.c
 )
 #set(raylib_VERBOSE 1)
 target_link_libraries(${PROJECT_NAME} raylib)

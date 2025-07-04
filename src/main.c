@@ -13,6 +13,7 @@ int main(void) {
     
     while (!WindowShouldClose()) {
         state = input_system(state);
+        state = camera_scrolling_system(state);
         state = view_switching_system(state);
         
         if (state.current_view == VIEW_HOME_SCREEN) {
