@@ -60,5 +60,14 @@ void crossword_completion_render_system(GameState state);
 // Word System Function Declarations
 void initialize_random_seed(void);
 const char* get_random_word(void);
+int get_total_words_count(void);
+const char* get_word_by_index(int index);
+
+// Crossword Generator Function Declarations
+CrosswordLevel generate_crossword(int word_count, int grid_width, int grid_height);
+int select_random_words(char selected_words[][WORD_LENGTH + 1], int count);
+int find_intersections(const char* word1, const char* word2, IntersectionCandidate candidates[], int max_candidates);
+int can_place_word(char grid[][9], int grid_width, int grid_height, const char* word, int start_x, int start_y, int direction);
+void place_word_in_grid(char grid[][9], char word_mask[][9], int grid_width, int grid_height, const char* word, int start_x, int start_y, int direction);
 
 #endif

@@ -694,59 +694,20 @@ GameState crossword_input_system(GameState state) {
 }
 
 CrosswordLevel get_crossword_level(int level) {
-    CrosswordLevel crossword_level = {0};
+    // Generate crossword based on level
+    int word_count = 3;  // Start with 3 words for level 1
+    
+    // Increase word count for higher levels (up to 10 words max)
+    if (level > 1) {
+        word_count = 3 + (level - 1);
+        if (word_count > 10) {
+            word_count = 10;
+        }
+    }
+    
+    // Generate a crossword with the specified word count
+    CrosswordLevel crossword_level = generate_crossword(word_count, 9, 9);
     crossword_level.level = level;
-    
-    // Initialize all cells as blocked (0) and empty
-    for (int x = 0; x < 9; x++) {
-        for (int y = 0; y < 9; y++) {
-            crossword_level.word_mask[x][y] = 0;
-            crossword_level.solution[x][y] = '\0';
-        }
-    }
-    
-    if (level == 1) {
-        // Level 1: SWORD (horizontal row 0, cols 1-5), STARK (vertical col 1, rows 0-4), CROSS (horizontal row 3, cols 0-4)
-        
-        // Define words
-        crossword_level.word_count = 3;
-        
-        // Word 1: SWORD (horizontal, row 0, cols 1-5)
-        crossword_level.words[0].start_x = 1;
-        crossword_level.words[0].start_y = 0;
-        crossword_level.words[0].direction = 0; // horizontal
-        crossword_level.words[0].length = 5;
-        
-        const char* sword = "SWORD";
-        for (int i = 0; i < 5; i++) {
-            crossword_level.solution[1 + i][0] = sword[i];
-            crossword_level.word_mask[1 + i][0] = 1;
-        }
-        
-        // Word 2: STARK (vertical, col 1, rows 0-4) 
-        crossword_level.words[1].start_x = 1;
-        crossword_level.words[1].start_y = 0;
-        crossword_level.words[1].direction = 1; // vertical
-        crossword_level.words[1].length = 5;
-        
-        const char* stark = "STARK";
-        for (int i = 0; i < 5; i++) {
-            crossword_level.solution[1][i] = stark[i];
-            crossword_level.word_mask[1][i] = 1;
-        }
-        
-        // Word 3: CROSS (horizontal, row 3, cols 0-4)
-        crossword_level.words[2].start_x = 0;
-        crossword_level.words[2].start_y = 3;
-        crossword_level.words[2].direction = 0; // horizontal
-        crossword_level.words[2].length = 5;
-        
-        const char* cross = "CROSS";
-        for (int i = 0; i < 5; i++) {
-            crossword_level.solution[i][3] = cross[i];
-            crossword_level.word_mask[i][3] = 1;
-        }
-    }
     
     return crossword_level;
 }

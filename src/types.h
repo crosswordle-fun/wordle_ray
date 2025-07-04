@@ -111,6 +111,20 @@ typedef struct {
 } CrosswordWord;
 
 typedef struct {
+    char word[WORD_LENGTH + 1];     // The word itself
+    int start_x, start_y;           // Starting position in grid
+    int direction;                  // 0=horizontal, 1=vertical
+    int placed;                     // 1 if successfully placed, 0 if not
+} PlacedWord;
+
+typedef struct {
+    int word1_index, word2_index;   // Indices of the two words
+    int word1_pos, word2_pos;       // Letter positions within words
+    int grid_x, grid_y;             // Grid coordinates of intersection
+    int word2_direction;            // Direction word2 would be placed
+} IntersectionCandidate;
+
+typedef struct {
     char solution[9][9];    // Correct letters for the puzzle
     char word_mask[9][9];   // 1 = word cell, 0 = blocked cell
     int level;              // Current crossword level

@@ -29,3 +29,14 @@ const char* get_random_word(void) {
     int random_index = GetRandomValue(0, TOTAL_WORDS - 1);
     return WORDLE_WORDS[random_index];
 }
+
+int get_total_words_count(void) {
+    return TOTAL_WORDS;
+}
+
+const char* get_word_by_index(int index) {
+    if (index >= 0 && index < TOTAL_WORDS) {
+        return WORDLE_WORDS[index];
+    }
+    return NULL;  // Invalid index
+}
