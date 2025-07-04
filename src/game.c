@@ -54,6 +54,8 @@ GameState create_game_state(const char* target_word) {
     for (int x = 0; x < 9; x++) {
         for (int y = 0; y < 9; y++) {
             state.crossword.grid[x][y] = '\0';
+            state.crossword.letter_states[x][y] = LETTER_UNKNOWN;
+            state.crossword.word_validated[x][y] = 0;
         }
     }
     state.crossword.current_level = get_crossword_level(1);
@@ -62,6 +64,7 @@ GameState create_game_state(const char* target_word) {
     state.crossword.cursor_x = 1;  // First letter of SWORD
     state.crossword.cursor_y = 0;
     state.crossword.cursor_direction = 0;  // Start in horizontal mode
+    state.crossword.should_validate = 0;   // Initialize validation flag
     
     return state;
 }
@@ -469,6 +472,11 @@ GameState crossword_input_system(GameState state) {
         }
     }
     
+    // Enter key to validate current word
+    if (state.system.enter_pressed) {
+        state.crossword.should_validate = 1;
+    }
+    
     return state;
 }
 
@@ -510,6 +518,113 @@ CrosswordLevel get_crossword_level(int level) {
     }
     
     return crossword_level;
+}
+
+GameState crossword_word_validation_system(GameState state) {
+    if (state.current_view != VIEW_CROSSWORD || !state.crossword.should_validate) {
+        return state;
+    }
+    
+    // Reset validation flag
+    state.crossword.should_validate = 0;
+    
+    // Extract current word based on cursor position and direction
+    char current_word[WORD_LENGTH + 1] = {0};
+    char solution_word[WORD_LENGTH + 1] = {0};
+    int word_start_x = state.crossword.cursor_x;
+    int word_start_y = state.crossword.cursor_y;
+    
+    // Find the start of the current word
+    if (state.crossword.cursor_direction == 0) {
+        // Horizontal: find leftmost cell of current word
+        while (word_start_x > 0 && 
+               state.crossword.current_level.word_mask[word_start_x - 1][word_start_y]) {
+            word_start_x--;
+        }
+    } else {
+        // Vertical: find topmost cell of current word
+        while (word_start_y > 0 && 
+               state.crossword.current_level.word_mask[word_start_x][word_start_y - 1]) {
+            word_start_y--;
+        }
+    }
+    
+    // Extract the word and solution
+    int word_length = 0;
+    for (int i = 0; i < WORD_LENGTH; i++) {
+        int check_x = word_start_x + (state.crossword.cursor_direction == 0 ? i : 0);
+        int check_y = word_start_y + (state.crossword.cursor_direction == 1 ? i : 0);
+        
+        // Check if position is valid and part of a word
+        if (check_x < 9 && check_y < 9 && 
+            state.crossword.current_level.word_mask[check_x][check_y]) {
+            current_word[i] = state.crossword.grid[check_x][check_y];
+            solution_word[i] = state.crossword.current_level.solution[check_x][check_y];
+            if (current_word[i] != '\0') {
+                word_length++;
+            }
+        } else {
+            break;
+        }
+    }
+    
+    // Only validate if word is complete (5 letters)
+    if (word_length == WORD_LENGTH) {
+        // Check if all letters are filled
+        int all_filled = 1;
+        for (int i = 0; i < WORD_LENGTH; i++) {
+            if (current_word[i] == '\0') {
+                all_filled = 0;
+                break;
+            }
+        }
+        
+        if (all_filled) {
+            // Validate word using existing Wordle logic
+            int word_correct = check_word_match(current_word, solution_word);
+            
+            // Calculate and store letter states for visual feedback
+            for (int i = 0; i < WORD_LENGTH; i++) {
+                int pos_x = word_start_x + (state.crossword.cursor_direction == 0 ? i : 0);
+                int pos_y = word_start_y + (state.crossword.cursor_direction == 1 ? i : 0);
+                
+                if (pos_x < 9 && pos_y < 9) {
+                    LetterState letter_state = calculate_letter_state(current_word[i], i, solution_word);
+                    state.crossword.letter_states[pos_x][pos_y] = letter_state;
+                    state.crossword.word_validated[pos_x][pos_y] = 1;
+                }
+            }
+            
+            if (word_correct) {
+                // Word is correct - mark completion and provide feedback
+                printf("Word '%s' is correct!\n", current_word);
+                
+                // Check if entire crossword is completed
+                int all_words_correct = 1;
+                for (int x = 0; x < 9; x++) {
+                    for (int y = 0; y < 9; y++) {
+                        if (state.crossword.current_level.word_mask[x][y]) {
+                            if (state.crossword.grid[x][y] != state.crossword.current_level.solution[x][y]) {
+                                all_words_correct = 0;
+                                break;
+                            }
+                        }
+                    }
+                    if (!all_words_correct) break;
+                }
+                
+                if (all_words_correct) {
+                    printf("Congratulations! Crossword puzzle completed!\n");
+                    // TODO: Add crossword completion handling
+                }
+            } else {
+                // Word is incorrect - provide letter-by-letter feedback
+                printf("Word '%s' is incorrect. Expected '%s'\n", current_word, solution_word);
+            }
+        }
+    }
+    
+    return state;
 }
 
 GameState new_level_system(GameState state) {

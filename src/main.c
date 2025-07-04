@@ -25,6 +25,7 @@ int main(void) {
             }
         } else if (state.current_view == VIEW_CROSSWORD) {
             state = crossword_input_system(state);
+            state = crossword_word_validation_system(state);
         }
         
         BeginDrawing();

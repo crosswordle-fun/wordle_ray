@@ -288,24 +288,24 @@ void crossword_render_system(GameState state) {
                 cell_color = WORDLE_DARK_GRAY;
                 border_color = WORDLE_BLACK;
             } else {
-                // Word cell - white background
+                // Word cell - default to white background
                 cell_color = WORDLE_WHITE;
                 
-                // Check if letter matches solution for validation feedback
                 char placed_letter = state.crossword.grid[x][y];
-                char solution_letter = state.crossword.current_level.solution[x][y];
                 
                 if (placed_letter != '\0') {
-                    if (placed_letter == solution_letter) {
-                        cell_color = WORDLE_GREEN;  // Correct letter
+                    if (state.crossword.word_validated[x][y]) {
+                        // Use proper Wordle validation colors for validated letters
+                        cell_color = get_color_for_letter_state(state.crossword.letter_states[x][y]);
                     } else {
-                        cell_color = (Color){255, 200, 200, 255};  // Light red for incorrect
+                        // Light grey for unvalidated placed letters
+                        cell_color = (Color){220, 220, 220, 255};  // Light grey
                     }
                 }
                 
                 // Highlight cursor position (only in word cells)
                 if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
-                    if (placed_letter == '\0' || placed_letter != solution_letter) {
+                    if (placed_letter == '\0' || !state.crossword.word_validated[x][y]) {
                         cell_color = WORDLE_YELLOW;  // Cursor highlight
                     }
                     border_color = WORDLE_WHITE;
@@ -329,11 +329,13 @@ void crossword_render_system(GameState state) {
                     // Priority 1: Show player-placed letter with validation colors
                     letter_to_display = player_letter;
                     
-                    // Text color based on cell background (green/red validation)
-                    if (cell_color.r == WORDLE_GREEN.r && cell_color.g == WORDLE_GREEN.g) {
-                        text_color = WORDLE_WHITE;  // White text on green background
+                    // Text color based on validation state
+                    if (state.crossword.word_validated[x][y]) {
+                        // Validated letters use white text for all colored backgrounds
+                        text_color = WORDLE_WHITE;
                     } else {
-                        text_color = WORDLE_BLACK;  // Black text on white/red background
+                        // Unvalidated letters use black text on light grey background
+                        text_color = WORDLE_BLACK;
                     }
                     
                 } else if (state.system.debug_mode && solution_letter != '\0') {
@@ -369,7 +371,7 @@ void crossword_render_system(GameState state) {
     }
     
     // Instructions
-    const char* instructions = "Arrows: move cursor | Letters: type continuously | Shift: toggle direction | Backspace: delete backwards | Tab: return to Wordle";
+    const char* instructions = "Arrows: move cursor | Letters: place letters | Enter: validate word | Shift: toggle direction | Backspace: delete | Tab: return to Wordle";
     int inst_font_size = 16;
     int inst_width = MeasureText(instructions, inst_font_size);
     int inst_x = (screen_width - inst_width) / 2;

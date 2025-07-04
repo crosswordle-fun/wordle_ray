@@ -18,6 +18,7 @@ GameState result_display_system(GameState state);
 GameState new_level_system(GameState state);
 GameState view_switching_system(GameState state);
 GameState crossword_input_system(GameState state);
+GameState crossword_word_validation_system(GameState state);
 
 // Crossword System Function Declarations
 CrosswordLevel get_crossword_level(int level);

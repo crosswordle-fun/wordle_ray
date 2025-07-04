@@ -91,6 +91,9 @@ typedef struct {
     int cursor_y;           // Current cursor position Y (0-8)
     int cursor_direction;   // 0=horizontal (right), 1=vertical (down)
     CrosswordLevel current_level; // Current puzzle data
+    int should_validate;    // Set to 1 when Enter is pressed to validate current word
+    LetterState letter_states[9][9]; // Validation states for each cell
+    int word_validated[9][9]; // Track which words have been validated
 } CrosswordState;
 
 typedef struct {
