@@ -30,6 +30,10 @@ int is_letter_in_target_word(char letter, const char* target_word);
 LetterState calculate_letter_state(char guess_letter, int position, const char* target_word);
 int check_word_match(const char* word1, const char* word2);
 
+// Crossword Helper Function Declarations
+int find_first_editable_cell_in_word(GameState state, int word_index, int* out_x, int* out_y);
+int find_next_incomplete_word(GameState state);
+
 // Rendering System Function Declarations
 LayoutConfig calculate_layout(GameState state);
 Color get_color_for_letter_state(LetterState state);

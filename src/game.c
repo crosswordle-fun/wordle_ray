@@ -235,6 +235,48 @@ int check_word_match(const char* word1, const char* word2) {
     return strcmp(word1, word2) == 0;
 }
 
+// Helper function to find first editable (non-green) cell in a specific word
+int find_first_editable_cell_in_word(GameState state, int word_index, int* out_x, int* out_y) {
+    if (word_index < 0 || word_index >= state.crossword.current_level.word_count) {
+        return 0; // Invalid word index
+    }
+    
+    CrosswordWord* word = &state.crossword.current_level.words[word_index];
+    
+    // Search through word positions
+    for (int i = 0; i < word->length; i++) {
+        int check_x = word->start_x + (word->direction == 0 ? i : 0);
+        int check_y = word->start_y + (word->direction == 1 ? i : 0);
+        
+        // Check if this position is NOT green (available for editing)
+        if (!(state.crossword.word_validated[check_x][check_y] && 
+              state.crossword.letter_states[check_x][check_y] == LETTER_CORRECT)) {
+            *out_x = check_x;
+            *out_y = check_y;
+            return 1; // Found editable cell
+        }
+    }
+    
+    return 0; // No editable cell found
+}
+
+// Helper function to find next incomplete word starting from current word
+int find_next_incomplete_word(GameState state) {
+    int current_word = state.crossword.current_word_index;
+    
+    // Start searching from next word, wrap around
+    for (int i = 1; i <= state.crossword.current_level.word_count; i++) {
+        int check_word_index = (current_word + i) % state.crossword.current_level.word_count;
+        
+        int dummy_x, dummy_y;
+        if (find_first_editable_cell_in_word(state, check_word_index, &dummy_x, &dummy_y)) {
+            return check_word_index; // Found incomplete word
+        }
+    }
+    
+    return current_word; // All words complete, stay on current word
+}
+
 GameState word_validation_system(GameState state) {
     if (!state.input.should_submit || state.core.play_state != GAME_STATE_INPUT) {
         return state;
@@ -369,24 +411,13 @@ GameState crossword_input_system(GameState state) {
         CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
         state.crossword.cursor_direction = current_word->direction;
         
-        // Find first non-green (editable) cell in word
-        int found_editable = 0;
-        for (int i = 0; i < current_word->length; i++) {
-            int check_x = current_word->start_x + (current_word->direction == 0 ? i : 0);
-            int check_y = current_word->start_y + (current_word->direction == 1 ? i : 0);
-            
-            // Check if this position is NOT green (available for editing)
-            if (!(state.crossword.word_validated[check_x][check_y] && 
-                  state.crossword.letter_states[check_x][check_y] == LETTER_CORRECT)) {
-                state.crossword.cursor_x = check_x;
-                state.crossword.cursor_y = check_y;
-                found_editable = 1;
-                break;
-            }
-        }
-        
-        // If no editable cell found, position at start anyway
-        if (!found_editable) {
+        // Use helper function to find first editable cell
+        int found_x, found_y;
+        if (find_first_editable_cell_in_word(state, state.crossword.current_word_index, &found_x, &found_y)) {
+            state.crossword.cursor_x = found_x;
+            state.crossword.cursor_y = found_y;
+        } else {
+            // If no editable cell found, position at start anyway
             state.crossword.cursor_x = current_word->start_x;
             state.crossword.cursor_y = current_word->start_y;
         }
@@ -402,24 +433,13 @@ GameState crossword_input_system(GameState state) {
         CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
         state.crossword.cursor_direction = current_word->direction;
         
-        // Find first non-green (editable) cell in word
-        int found_editable = 0;
-        for (int i = 0; i < current_word->length; i++) {
-            int check_x = current_word->start_x + (current_word->direction == 0 ? i : 0);
-            int check_y = current_word->start_y + (current_word->direction == 1 ? i : 0);
-            
-            // Check if this position is NOT green (available for editing)
-            if (!(state.crossword.word_validated[check_x][check_y] && 
-                  state.crossword.letter_states[check_x][check_y] == LETTER_CORRECT)) {
-                state.crossword.cursor_x = check_x;
-                state.crossword.cursor_y = check_y;
-                found_editable = 1;
-                break;
-            }
-        }
-        
-        // If no editable cell found, position at start anyway
-        if (!found_editable) {
+        // Use helper function to find first editable cell
+        int found_x, found_y;
+        if (find_first_editable_cell_in_word(state, state.crossword.current_word_index, &found_x, &found_y)) {
+            state.crossword.cursor_x = found_x;
+            state.crossword.cursor_y = found_y;
+        } else {
+            // If no editable cell found, position at start anyway
             state.crossword.cursor_x = current_word->start_x;
             state.crossword.cursor_y = current_word->start_y;
         }
@@ -762,10 +782,28 @@ GameState crossword_word_validation_system(GameState state) {
                     printf("Congratulations! Crossword puzzle completed!\n");
                     state.crossword.puzzle_completed = 1;
                     state.current_view = VIEW_CROSSWORD_COMPLETE;
+                } else {
+                    // Find next incomplete word and position cursor there
+                    int next_word_index = find_next_incomplete_word(state);
+                    int next_x, next_y;
+                    
+                    if (find_first_editable_cell_in_word(state, next_word_index, &next_x, &next_y)) {
+                        state.crossword.current_word_index = next_word_index;
+                        state.crossword.cursor_x = next_x;
+                        state.crossword.cursor_y = next_y;
+                        state.crossword.cursor_direction = state.crossword.current_level.words[next_word_index].direction;
+                    }
                 }
             } else {
                 // Word is incorrect - provide letter-by-letter feedback
                 printf("Word '%s' is incorrect. Expected '%s'\n", current_word, solution_word);
+                
+                // Position cursor at first editable cell of current word for retry
+                int retry_x, retry_y;
+                if (find_first_editable_cell_in_word(state, state.crossword.current_word_index, &retry_x, &retry_y)) {
+                    state.crossword.cursor_x = retry_x;
+                    state.crossword.cursor_y = retry_y;
+                }
             }
         }
     }
