@@ -253,7 +253,7 @@ int can_place_word(char grid[][9], int grid_width, int grid_height,
     int end_x = start_x + dx * (WORD_LENGTH - 1);
     int end_y = start_y + dy * (WORD_LENGTH - 1);
     
-    if (end_x >= grid_width || end_y >= grid_height) {
+    if (start_x < 0 || start_y < 0 || end_x >= grid_width || end_y >= grid_height) {
         return 0;  // Word doesn't fit
     }
     
@@ -261,6 +261,11 @@ int can_place_word(char grid[][9], int grid_width, int grid_height,
     for (int i = 0; i < WORD_LENGTH; i++) {
         int x = start_x + dx * i;
         int y = start_y + dy * i;
+        
+        // Additional bounds check (defensive programming)
+        if (x < 0 || x >= grid_width || y < 0 || y >= grid_height) {
+            return 0;  // Out of bounds
+        }
         
         // If cell is not empty, check if it matches the word letter
         if (grid[x][y] != '\0') {
@@ -284,8 +289,11 @@ void place_word_in_grid(char grid[][9], char word_mask[][9], int grid_width, int
         int x = start_x + dx * i;
         int y = start_y + dy * i;
         
-        grid[x][y] = word[i];
-        word_mask[x][y] = 1;  // Mark as word cell
+        // Bounds check before placing
+        if (x >= 0 && x < grid_width && y >= 0 && y < grid_height) {
+            grid[x][y] = word[i];
+            word_mask[x][y] = 1;  // Mark as word cell
+        }
     }
 }
 
@@ -297,6 +305,14 @@ CrosswordLevel generate_crossword(int word_count, int grid_width, int grid_heigh
     if (word_count > MAX_CROSSWORD_WORDS) word_count = MAX_CROSSWORD_WORDS;
     if (grid_width > 9) grid_width = 9;
     if (grid_height > 9) grid_height = 9;
+    
+    // Reduce word count for smaller grids to prevent overcrowding
+    if (grid_width == 9 && grid_height == 9) {
+        if (word_count > 6) {
+            word_count = 6; // Limit to 6 words max for 9x9 grid
+            printf("Reduced word count to %d for 9x9 grid\n", word_count);
+        }
+    }
     
     // Initialize grid to empty
     for (int x = 0; x < grid_width; x++) {

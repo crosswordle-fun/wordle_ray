@@ -20,7 +20,7 @@ static const char* WORDLE_WORDS[] = {
     "CRASH", "CRAZY", "CREAM", "CRIME", "CRISP", "CROSS", "CROWD", "CROWN", "CRUDE", "CRUSH",
     "CURVE", "CYCLE", "DAILY", "DAIRY", "DANCE", "DATED", "DEALS", "DEATH", "DEBUT", "DELAY",
     "DENSE", "DEPTH", "DOING", "DOLOR", "DOORS", "DOUBT", "DOZEN", "DRAFT", "DRAMA", "DRANK",
-    "DRAWN", "DREAM", "DRESS", "DRILL", "DRINK", "DRIVE", "DRONE", "DROVE", "DRUNK", "DRYING"
+    "DRAWN", "DREAM", "DRESS", "DRILL", "DRINK", "DRIVE", "DRONE", "DROVE", "DRUNK"
 };
 
 #define TOTAL_WORDS (sizeof(WORDLE_WORDS) / sizeof(WORDLE_WORDS[0]))
