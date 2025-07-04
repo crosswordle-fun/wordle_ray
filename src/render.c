@@ -45,6 +45,26 @@ Color get_color_for_letter_state(LetterState state) {
 void board_render_system(GameState state) {
     LayoutConfig layout = calculate_layout(state);
     
+    // Calculate and draw middle view border around the game board area
+    int middle_view_margin = 20;  // Space between content and border
+    int middle_view_x = layout.board_start_x - middle_view_margin;
+    int middle_view_y = layout.board_start_y - middle_view_margin;
+    int middle_view_width = layout.board_width + 2 * middle_view_margin;
+    int middle_view_height = layout.board_height + 2 * middle_view_margin;
+    
+    // Ensure border stays within screen bounds
+    if (middle_view_x < 0) middle_view_x = 0;
+    if (middle_view_y < 0) middle_view_y = 0;
+    if (middle_view_x + middle_view_width > layout.screen_width) {
+        middle_view_width = layout.screen_width - middle_view_x;
+    }
+    if (middle_view_y + middle_view_height > layout.screen_height) {
+        middle_view_height = layout.screen_height - middle_view_y;
+    }
+    
+    Rectangle middle_view_border = {middle_view_x, middle_view_y, middle_view_width, middle_view_height};
+    DrawRectangleLinesEx(middle_view_border, 3, WORDLE_WHITE);  // 3px white border
+    
     // Render all rows (completed guesses + current input row)
     for (int row = 0; row < layout.total_rows; row++) {
         int row_y = layout.board_start_y + row * layout.row_height;
@@ -58,11 +78,11 @@ void board_render_system(GameState state) {
             int cell_x = layout.board_start_x + col * (layout.cell_size + layout.cell_spacing);
             int cell_y = row_y;
             
-            Color cell_color = WORDLE_WHITE;
-            Color border_color = WORDLE_BORDER;
+            Color cell_color = WORDLE_BLACK;  // Default to black background for empty cells
+            Color border_color = WORDLE_WHITE;  // White border for empty cells
             int border_width = 2;
             char letter_to_display = '\0';
-            Color text_color = WORDLE_BLACK;
+            Color text_color = WORDLE_WHITE;  // White text for visibility on black background
             
             // Determine what to display based on row type
             if (row < state.history.level_guess_count) {
@@ -274,15 +294,16 @@ void ui_render_system(GameState state) {
     // Calculate top bar height
     int top_bar_height = stats_y + stats_font_size + 20;  // 20px bottom padding
     
-    // Draw full-width white top bar
+    // Draw full-width black top bar with white border
     Rectangle top_bar = {0, 0, layout.screen_width, top_bar_height};
-    DrawRectangleRec(top_bar, WORDLE_WHITE);
+    DrawRectangleRec(top_bar, WORDLE_BLACK);
+    DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
     
     // Draw main title with tab-style highlighting
     int current_x = title_x;
     DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
     current_x += cross_width;
-    DrawText(" ", current_x, title_y, title_font_size, WORDLE_BLACK);
+    DrawText(" ", current_x, title_y, title_font_size, WORDLE_WHITE);
     current_x += space_width;
     
     // Draw rounded background for active "WORDLE" tab
@@ -298,15 +319,15 @@ void ui_render_system(GameState state) {
     DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_WHITE);  // Active tab with white text
     
     // Draw level info in separate row
-    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_DARK_GRAY);
+    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_WHITE);
     
     if (state.system.debug_mode) {
         int debug_width = MeasureText(debug_message, debug_font_size);
         int debug_x = (layout.screen_width - debug_width) / 2;
-        DrawText(debug_message, debug_x, debug_y, debug_font_size, (Color){200, 140, 0, 255});  // Dark yellow
+        DrawText(debug_message, debug_x, debug_y, debug_font_size, WORDLE_YELLOW);  // Yellow
     }
     
-    DrawText(level_stats, stats_x, stats_y, stats_font_size, WORDLE_DARK_GRAY);
+    DrawText(level_stats, stats_x, stats_y, stats_font_size, WORDLE_WHITE);
     
     // Game state specific messages
     if (state.core.play_state == GAME_STATE_LEVEL_COMPLETE) {
@@ -326,9 +347,10 @@ void ui_render_system(GameState state) {
         int completion_bar_height = success_font_size + score_font_size + 40;  // 40px padding
         int completion_bar_y = layout.board_start_y + layout.board_height + 20;
         
-        // Draw completion message bar
+        // Draw completion message bar with black background and white border
         Rectangle completion_bar = {0, completion_bar_y, layout.screen_width, completion_bar_height};
-        DrawRectangleRec(completion_bar, WORDLE_WHITE);
+        DrawRectangleRec(completion_bar, WORDLE_BLACK);
+        DrawRectangleLinesEx(completion_bar, 2, WORDLE_WHITE);
         
         // Draw completion content
         int success_width = MeasureText(success_message, success_font_size);
@@ -339,7 +361,7 @@ void ui_render_system(GameState state) {
         int score_width = MeasureText(level_score, score_font_size);
         int score_x = (layout.screen_width - score_width) / 2;
         int score_y = success_y + success_font_size + 10;
-        DrawText(level_score, score_x, score_y, score_font_size, WORDLE_BLACK);
+        DrawText(level_score, score_x, score_y, score_font_size, WORDLE_WHITE);
         
     } else {
         // Calculate bottom bar content and dimensions
@@ -396,9 +418,10 @@ void ui_render_system(GameState state) {
         
         int bottom_bar_y = layout.screen_height - bottom_bar_height;
         
-        // Draw full-width white bottom bar
+        // Draw full-width black bottom bar with white border
         Rectangle bottom_bar = {0, bottom_bar_y, layout.screen_width, bottom_bar_height};
-        DrawRectangleRec(bottom_bar, WORDLE_WHITE);
+        DrawRectangleRec(bottom_bar, WORDLE_BLACK);
+        DrawRectangleLinesEx(bottom_bar, 2, WORDLE_WHITE);
         
         // Draw bottom bar content with dark text
         int current_y = bottom_bar_y + 20;  // Top padding
@@ -407,26 +430,26 @@ void ui_render_system(GameState state) {
         if (state.stats.show_letter_bag) {
             int bag_width = MeasureText(letter_bag_text, bag_font_size);
             int bag_x = (layout.screen_width - bag_width) / 2;
-            DrawText(letter_bag_text, bag_x, current_y, bag_font_size, (Color){200, 140, 0, 255});  // Dark yellow
+            DrawText(letter_bag_text, bag_x, current_y, bag_font_size, WORDLE_YELLOW);  // Yellow
             current_y += bag_font_size + line_spacing;
         }
         
         // Lifetime stats
         int lifetime_width = MeasureText(lifetime_stats, lifetime_font_size);
         int lifetime_x = (layout.screen_width - lifetime_width) / 2;
-        DrawText(lifetime_stats, lifetime_x, current_y, lifetime_font_size, WORDLE_DARK_GRAY);
+        DrawText(lifetime_stats, lifetime_x, current_y, lifetime_font_size, WORDLE_WHITE);
         current_y += lifetime_font_size + line_spacing;
         
         // Debug instruction
         int debug_instruction_width = MeasureText(debug_instruction, debug_instruction_font_size);
         int debug_instruction_x = (layout.screen_width - debug_instruction_width) / 2;
-        DrawText(debug_instruction, debug_instruction_x, current_y, debug_instruction_font_size, WORDLE_DARK_GRAY);
+        DrawText(debug_instruction, debug_instruction_x, current_y, debug_instruction_font_size, WORDLE_WHITE);
         current_y += debug_instruction_font_size + line_spacing;
         
         // Main instruction
         int instruction_width = MeasureText(instruction, instruction_font_size);
         int instruction_x = (layout.screen_width - instruction_width) / 2;
-        DrawText(instruction, instruction_x, current_y, instruction_font_size, WORDLE_BLACK);
+        DrawText(instruction, instruction_x, current_y, instruction_font_size, WORDLE_WHITE);
     }
     
     // Render celebration particles
@@ -524,9 +547,10 @@ void crossword_render_system(GameState state) {
     // Calculate top bar height
     int top_bar_height = level_y + level_font_size + 20;  // 20px bottom padding
     
-    // Draw full-width white top bar
+    // Draw full-width black top bar with white border
     Rectangle top_bar = {0, 0, screen_width, top_bar_height};
-    DrawRectangleRec(top_bar, WORDLE_WHITE);
+    DrawRectangleRec(top_bar, WORDLE_BLACK);
+    DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
     
     // Draw main title with tab-style highlighting
     int current_x = title_x;
@@ -541,14 +565,14 @@ void crossword_render_system(GameState state) {
     };
     DrawRectangleRounded(cross_bg, 0.3f, 6, WORDLE_YELLOW);  // Yellow background for active tab
     
-    DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_BLACK);  // Active tab with black text
+    DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_BLACK);  // Active tab with black text (on yellow background)
     current_x += cross_width;
-    DrawText(" ", current_x, title_y, title_font_size, WORDLE_BLACK);
+    DrawText(" ", current_x, title_y, title_font_size, WORDLE_WHITE);
     current_x += space_width;
     DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
     
     // Draw level info in separate row
-    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_DARK_GRAY);
+    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_WHITE);
     
     // Calculate grid layout
     int grid_size = 9;
@@ -569,6 +593,23 @@ void crossword_render_system(GameState state) {
     int grid_start_x = (screen_width - grid_width) / 2;
     int grid_start_y = top_bar_height + (available_height - grid_height) / 2;
     
+    // Calculate and draw middle view border around the crossword grid area
+    int middle_view_margin = 20;  // Space between content and border
+    int middle_view_x = grid_start_x - middle_view_margin;
+    int middle_view_y = grid_start_y - middle_view_margin;
+    int middle_view_width = grid_width + 2 * middle_view_margin;
+    int middle_view_height = grid_height + 2 * middle_view_margin;
+    
+    // Ensure border stays within screen bounds
+    if (middle_view_x < 0) middle_view_x = 0;
+    if (middle_view_y < top_bar_height) middle_view_y = top_bar_height;
+    if (middle_view_x + middle_view_width > screen_width) {
+        middle_view_width = screen_width - middle_view_x;
+    }
+    
+    Rectangle middle_view_border = {middle_view_x, middle_view_y, middle_view_width, middle_view_height};
+    DrawRectangleLinesEx(middle_view_border, 3, WORDLE_WHITE);  // 3px white border
+    
     // Draw grid
     for (int x = 0; x < grid_size; x++) {
         for (int y = 0; y < grid_size; y++) {
@@ -579,7 +620,7 @@ void crossword_render_system(GameState state) {
             int is_word_cell = state.crossword.current_level.word_mask[x][y];
             
             Color cell_color;
-            Color border_color = WORDLE_BORDER;
+            Color border_color = WORDLE_WHITE;  // Default to white border for word cells
             int border_width = 2;
             
             if (!is_word_cell) {
@@ -587,8 +628,8 @@ void crossword_render_system(GameState state) {
                 cell_color = WORDLE_DARK_GRAY;
                 border_color = WORDLE_BLACK;
             } else {
-                // Word cell - default to white background
-                cell_color = WORDLE_WHITE;
+                // Word cell - default to black background with white border
+                cell_color = WORDLE_BLACK;
                 
                 char placed_letter = state.crossword.grid[x][y];
                 
@@ -620,9 +661,9 @@ void crossword_render_system(GameState state) {
                 }
                 
                 if (is_current_word_cell && placed_letter == '\0') {
-                    // Light blue highlight for current word cells (similar to cursor but lighter)
+                    // Dark blue highlight for current word cells on black background
                     // Show highlighting regardless of validation state
-                    cell_color = (Color){200, 220, 255, 255};  // Light blue tint
+                    cell_color = (Color){30, 50, 100, 255};  // Dark blue tint for visibility on black
                 }
                 
                 // Highlight cursor position with border only (no fill color change)
@@ -679,8 +720,8 @@ void crossword_render_system(GameState state) {
                         // Validated letters use white text for all colored backgrounds
                         text_color = WORDLE_WHITE;
                     } else {
-                        // Unvalidated letters use black text on light grey background
-                        text_color = WORDLE_BLACK;
+                        // Unvalidated letters use white text on light grey background
+                        text_color = WORDLE_WHITE;
                     }
                     
                 } else if (state.system.debug_mode && solution_letter != '\0') {
@@ -759,9 +800,10 @@ void crossword_render_system(GameState state) {
     
     int bottom_bar_y = screen_height - bottom_bar_height;
     
-    // Draw full-width white bottom bar
+    // Draw full-width black bottom bar with white border
     Rectangle bottom_bar = {0, bottom_bar_y, screen_width, bottom_bar_height};
-    DrawRectangleRec(bottom_bar, WORDLE_WHITE);
+    DrawRectangleRec(bottom_bar, WORDLE_BLACK);
+    DrawRectangleLinesEx(bottom_bar, 2, WORDLE_WHITE);
     
     // Draw bottom bar content with dark text
     int current_y = bottom_bar_y + 20;  // Top padding
@@ -770,14 +812,14 @@ void crossword_render_system(GameState state) {
     if (state.stats.show_letter_bag) {
         int bag_width = MeasureText(letter_bag_text, bag_font_size);
         int bag_x = (screen_width - bag_width) / 2;
-        DrawText(letter_bag_text, bag_x, current_y, bag_font_size, (Color){200, 140, 0, 255});  // Dark yellow
+        DrawText(letter_bag_text, bag_x, current_y, bag_font_size, WORDLE_YELLOW);  // Yellow
         current_y += bag_font_size + line_spacing;
     }
     
     // Instructions
     int inst_width = MeasureText(instructions, inst_font_size);
     int inst_x = (screen_width - inst_width) / 2;
-    DrawText(instructions, inst_x, current_y, inst_font_size, WORDLE_BLACK);
+    DrawText(instructions, inst_x, current_y, inst_font_size, WORDLE_WHITE);
 }
 
 void home_screen_render_system(GameState state) {
