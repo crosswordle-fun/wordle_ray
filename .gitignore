@@ -1,5 +1,6 @@
 # Build directory
 build/
+build_web/
 .cache/
 # CMake generated files
 CMakeCache.txt
