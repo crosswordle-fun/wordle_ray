@@ -82,9 +82,18 @@ typedef struct {
 } UIState;
 
 typedef struct {
+    int start_x;            // Starting X position
+    int start_y;            // Starting Y position
+    int direction;          // 0=horizontal, 1=vertical
+    int length;             // Word length (always 5 for now)
+} CrosswordWord;
+
+typedef struct {
     char solution[9][9];    // Correct letters for the puzzle
     char word_mask[9][9];   // 1 = word cell, 0 = blocked cell
     int level;              // Current crossword level
+    CrosswordWord words[10]; // Array of word definitions (max 10 words)
+    int word_count;         // Number of words in this level
 } CrosswordLevel;
 
 typedef struct {
@@ -97,6 +106,7 @@ typedef struct {
     LetterState letter_states[9][9]; // Validation states for each cell
     int word_validated[9][9]; // Track which words have been validated
     int puzzle_completed;   // Set to 1 when entire crossword is solved
+    int current_word_index; // Currently selected word (0-based)
 } CrosswordState;
 
 typedef struct {

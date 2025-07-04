@@ -60,10 +60,11 @@ GameState create_game_state(const char* target_word) {
     }
     state.crossword.current_level = get_crossword_level(1);
     
-    // Initialize cursor to first word cell
-    state.crossword.cursor_x = 1;  // First letter of SWORD
-    state.crossword.cursor_y = 0;
-    state.crossword.cursor_direction = 0;  // Start in horizontal mode
+    // Initialize cursor to first word (Word 1)
+    state.crossword.current_word_index = 0;  // Start with Word 1
+    state.crossword.cursor_x = state.crossword.current_level.words[0].start_x;
+    state.crossword.cursor_y = state.crossword.current_level.words[0].start_y;
+    state.crossword.cursor_direction = state.crossword.current_level.words[0].direction;
     state.crossword.should_validate = 0;   // Initialize validation flag
     state.crossword.puzzle_completed = 0;  // Initialize completion flag
     
@@ -356,36 +357,51 @@ GameState crossword_input_system(GameState state) {
         state.crossword.cursor_direction = !state.crossword.cursor_direction;
     }
     
-    // Arrow key navigation - only move to word cells
+    // Left/Right arrow keys cycle through words
+    if (IsKeyPressed(KEY_LEFT)) {
+        // Previous word (cycle backwards)
+        state.crossword.current_word_index--;
+        if (state.crossword.current_word_index < 0) {
+            state.crossword.current_word_index = state.crossword.current_level.word_count - 1;
+        }
+        
+        // Set cursor to start of selected word
+        CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
+        state.crossword.cursor_x = current_word->start_x;
+        state.crossword.cursor_y = current_word->start_y;
+        state.crossword.cursor_direction = current_word->direction;
+    }
+    if (IsKeyPressed(KEY_RIGHT)) {
+        // Next word (cycle forwards)
+        state.crossword.current_word_index++;
+        if (state.crossword.current_word_index >= state.crossword.current_level.word_count) {
+            state.crossword.current_word_index = 0;
+        }
+        
+        // Set cursor to start of selected word
+        CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
+        state.crossword.cursor_x = current_word->start_x;
+        state.crossword.cursor_y = current_word->start_y;
+        state.crossword.cursor_direction = current_word->direction;
+    }
+    
+    // Up/Down arrow keys navigate within current word only
+    CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
     if (state.system.up_arrow_pressed) {
-        for (int y = state.crossword.cursor_y - 1; y >= 0; y--) {
-            if (state.crossword.current_level.word_mask[state.crossword.cursor_x][y]) {
-                state.crossword.cursor_y = y;
-                break;
+        if (current_word->direction == 1) { // vertical word
+            int new_y = state.crossword.cursor_y - 1;
+            if (new_y >= current_word->start_y && 
+                state.crossword.current_level.word_mask[state.crossword.cursor_x][new_y]) {
+                state.crossword.cursor_y = new_y;
             }
         }
     }
     if (state.system.down_arrow_pressed) {
-        for (int y = state.crossword.cursor_y + 1; y < 9; y++) {
-            if (state.crossword.current_level.word_mask[state.crossword.cursor_x][y]) {
-                state.crossword.cursor_y = y;
-                break;
-            }
-        }
-    }
-    if (IsKeyPressed(KEY_LEFT)) {
-        for (int x = state.crossword.cursor_x - 1; x >= 0; x--) {
-            if (state.crossword.current_level.word_mask[x][state.crossword.cursor_y]) {
-                state.crossword.cursor_x = x;
-                break;
-            }
-        }
-    }
-    if (IsKeyPressed(KEY_RIGHT)) {
-        for (int x = state.crossword.cursor_x + 1; x < 9; x++) {
-            if (state.crossword.current_level.word_mask[x][state.crossword.cursor_y]) {
-                state.crossword.cursor_x = x;
-                break;
+        if (current_word->direction == 1) { // vertical word
+            int new_y = state.crossword.cursor_y + 1;
+            if (new_y < current_word->start_y + current_word->length && 
+                state.crossword.current_level.word_mask[state.crossword.cursor_x][new_y]) {
+                state.crossword.cursor_y = new_y;
             }
         }
     }
@@ -410,11 +426,12 @@ GameState crossword_input_system(GameState state) {
                 state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = letter;
                 state.stats.letter_counts[letter_index]--;
                 
-                // Auto-advance cursor in current direction
+                // Auto-advance cursor within current word
+                CrosswordWord* word = &state.crossword.current_level.words[state.crossword.current_word_index];
                 int next_x = state.crossword.cursor_x;
                 int next_y = state.crossword.cursor_y;
                 
-                if (state.crossword.cursor_direction == 0) {
+                if (word->direction == 0) {
                     // Horizontal: move right
                     next_x++;
                 } else {
@@ -422,11 +439,15 @@ GameState crossword_input_system(GameState state) {
                     next_y++;
                 }
                 
-                // Check if next position is valid and within bounds
-                if (next_x < 9 && next_y < 9 && 
-                    state.crossword.current_level.word_mask[next_x][next_y]) {
-                    state.crossword.cursor_x = next_x;
-                    state.crossword.cursor_y = next_y;
+                // Check if next position is within current word bounds
+                if ((word->direction == 0 && next_x < word->start_x + word->length) ||
+                    (word->direction == 1 && next_y < word->start_y + word->length)) {
+                    
+                    if (next_x < 9 && next_y < 9 && 
+                        state.crossword.current_level.word_mask[next_x][next_y]) {
+                        state.crossword.cursor_x = next_x;
+                        state.crossword.cursor_y = next_y;
+                    }
                 }
             }
         }
@@ -443,11 +464,12 @@ GameState crossword_input_system(GameState state) {
                 state.stats.letter_counts[existing_index]++;
                 state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = '\0';
             } else {
-                // No letter at current position, move backwards and delete
+                // No letter at current position, move backwards within current word and delete
+                CrosswordWord* word = &state.crossword.current_level.words[state.crossword.current_word_index];
                 int prev_x = state.crossword.cursor_x;
                 int prev_y = state.crossword.cursor_y;
                 
-                if (state.crossword.cursor_direction == 0) {
+                if (word->direction == 0) {
                     // Horizontal: move left
                     prev_x--;
                 } else {
@@ -455,20 +477,24 @@ GameState crossword_input_system(GameState state) {
                     prev_y--;
                 }
                 
-                // Check if previous position is valid and has a letter
-                if (prev_x >= 0 && prev_y >= 0 && 
-                    state.crossword.current_level.word_mask[prev_x][prev_y]) {
+                // Check if previous position is within current word bounds
+                if ((word->direction == 0 && prev_x >= word->start_x) ||
+                    (word->direction == 1 && prev_y >= word->start_y)) {
                     
-                    char prev_letter = state.crossword.grid[prev_x][prev_y];
-                    if (prev_letter != '\0') {
-                        // Remove letter at previous position
-                        int prev_index = prev_letter - 'A';
-                        state.stats.letter_counts[prev_index]++;
-                        state.crossword.grid[prev_x][prev_y] = '\0';
+                    if (prev_x >= 0 && prev_y >= 0 && 
+                        state.crossword.current_level.word_mask[prev_x][prev_y]) {
                         
-                        // Move cursor back
-                        state.crossword.cursor_x = prev_x;
-                        state.crossword.cursor_y = prev_y;
+                        char prev_letter = state.crossword.grid[prev_x][prev_y];
+                        if (prev_letter != '\0') {
+                            // Remove letter at previous position
+                            int prev_index = prev_letter - 'A';
+                            state.stats.letter_counts[prev_index]++;
+                            state.crossword.grid[prev_x][prev_y] = '\0';
+                            
+                            // Move cursor back
+                            state.crossword.cursor_x = prev_x;
+                            state.crossword.cursor_y = prev_y;
+                        }
                     }
                 }
             }
@@ -496,23 +522,41 @@ CrosswordLevel get_crossword_level(int level) {
     }
     
     if (level == 1) {
-        // Level 1: SWORD (horizontal row 0, cols 1-5), STARK (vertical col 1, rows 0-4), CROSS (horizontal row 4, cols 0-4)
+        // Level 1: SWORD (horizontal row 0, cols 1-5), STARK (vertical col 1, rows 0-4), CROSS (horizontal row 3, cols 0-4)
         
-        // SWORD (horizontal, row 0, cols 1-5)
+        // Define words
+        crossword_level.word_count = 3;
+        
+        // Word 1: SWORD (horizontal, row 0, cols 1-5)
+        crossword_level.words[0].start_x = 1;
+        crossword_level.words[0].start_y = 0;
+        crossword_level.words[0].direction = 0; // horizontal
+        crossword_level.words[0].length = 5;
+        
         const char* sword = "SWORD";
         for (int i = 0; i < 5; i++) {
             crossword_level.solution[1 + i][0] = sword[i];
             crossword_level.word_mask[1 + i][0] = 1;
         }
         
-        // STARK (vertical, col 1, rows 0-4) 
+        // Word 2: STARK (vertical, col 1, rows 0-4) 
+        crossword_level.words[1].start_x = 1;
+        crossword_level.words[1].start_y = 0;
+        crossword_level.words[1].direction = 1; // vertical
+        crossword_level.words[1].length = 5;
+        
         const char* stark = "STARK";
         for (int i = 0; i < 5; i++) {
             crossword_level.solution[1][i] = stark[i];
             crossword_level.word_mask[1][i] = 1;
         }
         
-        // CROSS (horizontal, row 3, cols 0-4)
+        // Word 3: CROSS (horizontal, row 3, cols 0-4)
+        crossword_level.words[2].start_x = 0;
+        crossword_level.words[2].start_y = 3;
+        crossword_level.words[2].direction = 0; // horizontal
+        crossword_level.words[2].length = 5;
+        
         const char* cross = "CROSS";
         for (int i = 0; i < 5; i++) {
             crossword_level.solution[i][3] = cross[i];
@@ -704,9 +748,11 @@ GameState crossword_completion_input_system(GameState state) {
                 state.crossword.word_validated[x][y] = 0;
             }
         }
-        state.crossword.cursor_x = 1;
-        state.crossword.cursor_y = 0;
-        state.crossword.cursor_direction = 0;
+        // Reset to first word
+        state.crossword.current_word_index = 0;
+        state.crossword.cursor_x = state.crossword.current_level.words[0].start_x;
+        state.crossword.cursor_y = state.crossword.current_level.words[0].start_y;
+        state.crossword.cursor_direction = state.crossword.current_level.words[0].direction;
         state.crossword.should_validate = 0;
         state.crossword.puzzle_completed = 0;
         

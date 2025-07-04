@@ -304,6 +304,28 @@ void crossword_render_system(GameState state) {
                     }
                 }
                 
+                // Highlight current word cells with subtle background
+                CrosswordWord* current_word = &state.crossword.current_level.words[state.crossword.current_word_index];
+                int is_current_word_cell = 0;
+                if (current_word->direction == 0) { // horizontal
+                    if (y == current_word->start_y && 
+                        x >= current_word->start_x && 
+                        x < current_word->start_x + current_word->length) {
+                        is_current_word_cell = 1;
+                    }
+                } else { // vertical
+                    if (x == current_word->start_x && 
+                        y >= current_word->start_y && 
+                        y < current_word->start_y + current_word->length) {
+                        is_current_word_cell = 1;
+                    }
+                }
+                
+                if (is_current_word_cell && placed_letter == '\0' && !state.crossword.word_validated[x][y]) {
+                    // Subtle highlight for current word cells
+                    cell_color = (Color){240, 240, 240, 255};  // Very light gray
+                }
+                
                 // Highlight cursor position (only in word cells)
                 if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
                     if (placed_letter == '\0' || !state.crossword.word_validated[x][y]) {
@@ -371,12 +393,49 @@ void crossword_render_system(GameState state) {
         }
     }
     
-    // Instructions
-    const char* instructions = "Arrows: move cursor | Letters: place letters | Enter: validate word | Shift: toggle direction | Backspace: delete | Tab: return to Wordle";
-    int inst_font_size = 16;
+    // Draw word number indicators
+    for (int word_num = 0; word_num < state.crossword.current_level.word_count; word_num++) {
+        CrosswordWord* word = &state.crossword.current_level.words[word_num];
+        int cell_x = grid_start_x + word->start_x * cell_size;
+        int cell_y = grid_start_y + word->start_y * cell_size;
+        
+        // Position number indicator in top-left corner of starting cell
+        char number_str[3];
+        sprintf(number_str, "%d", word_num + 1);
+        
+        int number_font_size = (int)(cell_size * 0.3f);
+        if (number_font_size < 12) number_font_size = 12;
+        if (number_font_size > 18) number_font_size = 18;
+        
+        // Offset position to top-left corner
+        int number_x = cell_x + 3;
+        int number_y = cell_y + 3;
+        
+        // Highlight current word number
+        Color number_color = (word_num == state.crossword.current_word_index) ? 
+                            WORDLE_YELLOW : WORDLE_GRAY;
+        
+        DrawText(number_str, number_x, number_y, number_font_size, number_color);
+    }
+    
+    // Instructions with current word indicator
+    char word_indicator[50];
+    sprintf(word_indicator, "Current Word: %d of %d", 
+            state.crossword.current_word_index + 1, 
+            state.crossword.current_level.word_count);
+    
+    int word_font_size = 18;
+    int word_width = MeasureText(word_indicator, word_font_size);
+    int word_x = (screen_width - word_width) / 2;
+    int word_y = grid_start_y + grid_height + 20;
+    DrawText(word_indicator, word_x, word_y, word_font_size, WORDLE_YELLOW);
+    
+    // Updated instructions
+    const char* instructions = "Left/Right: select word | Up/Down: navigate within word | Letters: place letters | Enter: validate word | Tab: return to Wordle";
+    int inst_font_size = 14;
     int inst_width = MeasureText(instructions, inst_font_size);
     int inst_x = (screen_width - inst_width) / 2;
-    int inst_y = grid_start_y + grid_height + 30;
+    int inst_y = word_y + word_font_size + 10;
     DrawText(instructions, inst_x, inst_y, inst_font_size, WORDLE_GRAY);
     
     // Letter bag display
