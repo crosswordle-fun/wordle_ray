@@ -8,8 +8,10 @@ This is a Raylib-based C game project called "Crosswordle" - featuring both an i
 ## Build System
 The project uses CMake with the following structure:
 - `CMakeLists.txt`: Main build configuration
-- `src/main.c`: Entry point with main function and game loop
-- `src/systems.h`: Centralized header with all function declarations and structs
+- `main.c`: Legacy entry point (use `src/main.c` instead)
+- `src/main.c`: Current entry point with main function and game loop
+- `src/types.h`: All data structures, enums, and type definitions
+- `src/systems.h`: Centralized header with all function declarations
 - `src/constants.h`: Game constants and color definitions
 - `src/game.c`: Game logic system implementations
 - `src/render.c`: Rendering system implementations
@@ -161,3 +163,10 @@ The main game loop processes systems in a specific order for each view:
 ## Key Dependencies
 - Raylib 5.5 (automatically fetched if not found)
 - CMake 3.11+ (for FetchContent support)
+- Standard C library (stdio.h, stdlib.h, string.h, ctype.h, time.h)
+
+## Development Notes
+- The project includes a `docs/roadmap.md` with comprehensive feature enhancement ideas
+- There's a legacy `main.c` in the root directory - use `src/main.c` instead
+- Debug mode provides useful development tools accessible via number keys 1-5
+- The architecture separates concerns cleanly: types, constants, systems, game logic, rendering, and word management
