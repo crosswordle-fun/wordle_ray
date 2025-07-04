@@ -367,8 +367,8 @@ void crossword_render_system(GameState state) {
                 }
                 
                 if (is_current_word_cell && placed_letter == '\0' && !state.crossword.word_validated[x][y]) {
-                    // Subtle highlight for current word cells
-                    cell_color = (Color){240, 240, 240, 255};  // Very light gray
+                    // Darker highlight for current word cells
+                    cell_color = (Color){180, 180, 180, 255};  // Medium gray for better visibility
                 }
                 
                 // Highlight cursor position (only in word cells, not on green letters)
