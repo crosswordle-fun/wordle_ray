@@ -277,6 +277,51 @@ int find_next_incomplete_word(GameState state) {
     return current_word; // All words complete, stay on current word
 }
 
+// Helper function to find previous editable cell with a letter in current word
+int find_previous_editable_cell_with_letter(GameState state, int current_x, int current_y, int* out_x, int* out_y) {
+    CrosswordWord* word = &state.crossword.current_level.words[state.crossword.current_word_index];
+    
+    // Search backwards from current position
+    for (int i = 1; i < word->length; i++) {
+        int check_x, check_y;
+        
+        if (word->direction == 0) {
+            // Horizontal: move left
+            check_x = current_x - i;
+            check_y = current_y;
+        } else {
+            // Vertical: move up
+            check_x = current_x;
+            check_y = current_y - i;
+        }
+        
+        // Check if position is within word bounds
+        if ((word->direction == 0 && check_x >= word->start_x) ||
+            (word->direction == 1 && check_y >= word->start_y)) {
+            
+            // Check if position is valid and part of word
+            if (check_x >= 0 && check_y >= 0 && check_x < 9 && check_y < 9 &&
+                state.crossword.current_level.word_mask[check_x][check_y]) {
+                
+                // Check if this position has a letter and is NOT green (deletable)
+                char existing_letter = state.crossword.grid[check_x][check_y];
+                if (existing_letter != '\0' && 
+                    !(state.crossword.word_validated[check_x][check_y] && 
+                      state.crossword.letter_states[check_x][check_y] == LETTER_CORRECT)) {
+                    *out_x = check_x;
+                    *out_y = check_y;
+                    return 1; // Found deletable letter
+                }
+            }
+        } else {
+            // Reached start of word
+            break;
+        }
+    }
+    
+    return 0; // No deletable letter found
+}
+
 GameState word_validation_system(GameState state) {
     if (!state.input.should_submit || state.core.play_state != GAME_STATE_INPUT) {
         return state;
@@ -575,46 +620,20 @@ GameState crossword_input_system(GameState state) {
                 state.stats.letter_counts[existing_index]++;
                 state.crossword.grid[state.crossword.cursor_x][state.crossword.cursor_y] = '\0';
             } else {
-                // No letter at current position, move backwards within current word and delete
-                CrosswordWord* word = &state.crossword.current_level.words[state.crossword.current_word_index];
-                int prev_x = state.crossword.cursor_x;
-                int prev_y = state.crossword.cursor_y;
-                
-                if (word->direction == 0) {
-                    // Horizontal: move left
-                    prev_x--;
-                } else {
-                    // Vertical: move up
-                    prev_y--;
-                }
-                
-                // Check if previous position is within current word bounds
-                if ((word->direction == 0 && prev_x >= word->start_x) ||
-                    (word->direction == 1 && prev_y >= word->start_y)) {
+                // No letter at current position, search backwards for deletable letter
+                int prev_x, prev_y;
+                if (find_previous_editable_cell_with_letter(state, state.crossword.cursor_x, state.crossword.cursor_y, &prev_x, &prev_y)) {
+                    // Found a deletable letter, remove it and move cursor there
+                    char prev_letter = state.crossword.grid[prev_x][prev_y];
+                    int prev_index = prev_letter - 'A';
+                    state.stats.letter_counts[prev_index]++;
+                    state.crossword.grid[prev_x][prev_y] = '\0';
                     
-                    if (prev_x >= 0 && prev_y >= 0 && 
-                        state.crossword.current_level.word_mask[prev_x][prev_y]) {
-                        
-                        char prev_letter = state.crossword.grid[prev_x][prev_y];
-                        if (prev_letter != '\0') {
-                            // Check if previous position is locked (green letter)
-                            if (state.crossword.word_validated[prev_x][prev_y] && 
-                                state.crossword.letter_states[prev_x][prev_y] == LETTER_CORRECT) {
-                                // This cell is locked, prevent deletion
-                                return state;
-                            }
-                            
-                            // Remove letter at previous position
-                            int prev_index = prev_letter - 'A';
-                            state.stats.letter_counts[prev_index]++;
-                            state.crossword.grid[prev_x][prev_y] = '\0';
-                            
-                            // Move cursor back
-                            state.crossword.cursor_x = prev_x;
-                            state.crossword.cursor_y = prev_y;
-                        }
-                    }
+                    // Move cursor to the deleted position
+                    state.crossword.cursor_x = prev_x;
+                    state.crossword.cursor_y = prev_y;
                 }
+                // If no deletable letter found, cursor stays at current position
             }
         }
     }
