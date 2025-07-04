@@ -545,22 +545,17 @@ void crossword_render_system(GameState state) {
                     }
                 }
                 
-                if (is_current_word_cell && placed_letter == '\0' && !state.crossword.word_validated[x][y]) {
-                    // Darker highlight for current word cells
-                    cell_color = (Color){180, 180, 180, 255};  // Medium gray for better visibility
+                if (is_current_word_cell && placed_letter == '\0') {
+                    // Light blue highlight for current word cells (similar to cursor but lighter)
+                    // Show highlighting regardless of validation state
+                    cell_color = (Color){200, 220, 255, 255};  // Light blue tint
                 }
                 
-                // Highlight cursor position (only in word cells, not on green letters)
+                // Highlight cursor position with border only (no fill color change)
                 if (x == state.crossword.cursor_x && y == state.crossword.cursor_y) {
-                    // Only show yellow cursor on non-green cells
-                    if ((placed_letter == '\0' || !state.crossword.word_validated[x][y]) ||
-                        (state.crossword.word_validated[x][y] && 
-                         state.crossword.letter_states[x][y] != LETTER_CORRECT)) {
-                        cell_color = WORDLE_YELLOW;  // Cursor highlight
-                    }
-                    // Always show white border on cursor position (even on green)
-                    border_color = WORDLE_WHITE;
-                    border_width = 3;
+                    // Use a distinctive border color that doesn't conflict with Wordle feedback
+                    border_color = (Color){0, 150, 255, 255};  // Bright blue border
+                    border_width = 4;  // Thicker border for better visibility
                 }
             }
             
@@ -617,7 +612,7 @@ void crossword_render_system(GameState state) {
                 } else if (state.system.debug_mode && solution_letter != '\0') {
                     // Priority 2: Show debug solution letter in light gray (only when no player letter)
                     letter_to_display = solution_letter;
-                    text_color = (Color){180, 180, 180, 255};  // Light gray for debug
+                    text_color = (Color){180, 180, 180, 255};  // Light gray for debug - distinct from player input
                 }
                 
                 // Draw the letter if we have one to display
