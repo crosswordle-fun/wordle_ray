@@ -6,13 +6,15 @@ int main(void) {
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetWindowMinSize(400, 300);
     
-    GameState state = create_game_state(get_random_word());
+    GameState state = create_game_state("");
     
     while (!WindowShouldClose()) {
         state = input_system(state);
         state = view_switching_system(state);
         
-        if (state.current_view == VIEW_WORDLE) {
+        if (state.current_view == VIEW_HOME_SCREEN) {
+            state = home_screen_input_system(state);
+        } else if (state.current_view == VIEW_WORDLE) {
             state = word_editing_system(state);
             state = word_validation_system(state);
             state = result_display_system(state);
@@ -26,6 +28,8 @@ int main(void) {
         } else if (state.current_view == VIEW_CROSSWORD) {
             state = crossword_input_system(state);
             state = crossword_word_validation_system(state);
+        } else if (state.current_view == VIEW_CROSSWORD_COMPLETE) {
+            state = crossword_completion_input_system(state);
         }
         
         BeginDrawing();

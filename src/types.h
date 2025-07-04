@@ -23,8 +23,10 @@ typedef enum {
 } GamePlayState;
 
 typedef enum {
-    VIEW_WORDLE = 0,
-    VIEW_CROSSWORD = 1
+    VIEW_HOME_SCREEN = 0,
+    VIEW_WORDLE = 1,
+    VIEW_CROSSWORD = 2,
+    VIEW_CROSSWORD_COMPLETE = 3
 } GameViewState;
 
 // Game State Structs
@@ -94,6 +96,7 @@ typedef struct {
     int should_validate;    // Set to 1 when Enter is pressed to validate current word
     LetterState letter_states[9][9]; // Validation states for each cell
     int word_validated[9][9]; // Track which words have been validated
+    int puzzle_completed;   // Set to 1 when entire crossword is solved
 } CrosswordState;
 
 typedef struct {

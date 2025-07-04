@@ -19,6 +19,8 @@ GameState new_level_system(GameState state);
 GameState view_switching_system(GameState state);
 GameState crossword_input_system(GameState state);
 GameState crossword_word_validation_system(GameState state);
+GameState home_screen_input_system(GameState state);
+GameState crossword_completion_input_system(GameState state);
 
 // Crossword System Function Declarations
 CrosswordLevel get_crossword_level(int level);
@@ -35,6 +37,8 @@ void board_render_system(GameState state);
 void ui_render_system(GameState state);
 void render_system(GameState state);
 void crossword_render_system(GameState state);
+void home_screen_render_system(GameState state);
+void crossword_completion_render_system(GameState state);
 
 // Word System Function Declarations
 void initialize_random_seed(void);

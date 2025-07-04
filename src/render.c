@@ -1,4 +1,5 @@
 #include "systems.h"
+#include <math.h>
 
 LayoutConfig calculate_layout(GameState state) {
     LayoutConfig layout = {0};
@@ -404,13 +405,156 @@ void crossword_render_system(GameState state) {
     }
 }
 
+void home_screen_render_system(GameState state) {
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
+    
+    // Game title
+    const char* title = "CROSSWORDLE";
+    int title_font_size = (int)(screen_width * 0.08f);
+    if (title_font_size < 48) title_font_size = 48;
+    if (title_font_size > 96) title_font_size = 96;
+    
+    int title_width = MeasureText(title, title_font_size);
+    int title_x = (screen_width - title_width) / 2;
+    int title_y = screen_height / 3;
+    
+    DrawText(title, title_x, title_y, title_font_size, WORDLE_WHITE);
+    
+    // Subtitle
+    const char* subtitle = "Infinite Wordle + Crossword Puzzles";
+    int subtitle_font_size = (int)(screen_width * 0.025f);
+    if (subtitle_font_size < 18) subtitle_font_size = 18;
+    if (subtitle_font_size > 32) subtitle_font_size = 32;
+    
+    int subtitle_width = MeasureText(subtitle, subtitle_font_size);
+    int subtitle_x = (screen_width - subtitle_width) / 2;
+    int subtitle_y = title_y + title_font_size + 20;
+    
+    DrawText(subtitle, subtitle_x, subtitle_y, subtitle_font_size, WORDLE_GRAY);
+    
+    // Start instruction
+    const char* start_text = "Press ENTER to start";
+    int start_font_size = (int)(screen_width * 0.04f);
+    if (start_font_size < 24) start_font_size = 24;
+    if (start_font_size > 48) start_font_size = 48;
+    
+    int start_width = MeasureText(start_text, start_font_size);
+    int start_x = (screen_width - start_width) / 2;
+    int start_y = screen_height / 2 + 80;
+    
+    // Add a subtle pulsing effect
+    float pulse = (sin(GetTime() * 2.0f) + 1.0f) * 0.5f;
+    Color start_color = (Color){
+        (int)(WORDLE_YELLOW.r * (0.7f + 0.3f * pulse)),
+        (int)(WORDLE_YELLOW.g * (0.7f + 0.3f * pulse)),
+        (int)(WORDLE_YELLOW.b * (0.7f + 0.3f * pulse)),
+        255
+    };
+    
+    DrawText(start_text, start_x, start_y, start_font_size, start_color);
+    
+    // Version or credits at bottom
+    const char* credits = "Built with Raylib";
+    int credits_font_size = 14;
+    int credits_width = MeasureText(credits, credits_font_size);
+    int credits_x = (screen_width - credits_width) / 2;
+    int credits_y = screen_height - 40;
+    
+    DrawText(credits, credits_x, credits_y, credits_font_size, WORDLE_BORDER);
+}
+
+void crossword_completion_render_system(GameState state) {
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
+    
+    // Victory title
+    const char* victory_title = "CROSSWORD COMPLETED!";
+    int title_font_size = (int)(screen_width * 0.06f);
+    if (title_font_size < 36) title_font_size = 36;
+    if (title_font_size > 72) title_font_size = 72;
+    
+    int title_width = MeasureText(victory_title, title_font_size);
+    int title_x = (screen_width - title_width) / 2;
+    int title_y = screen_height / 3;
+    
+    DrawText(victory_title, title_x, title_y, title_font_size, WORDLE_GREEN);
+    
+    // Congratulations message
+    const char* congrats = "Well done! You solved the puzzle!";
+    int congrats_font_size = (int)(screen_width * 0.03f);
+    if (congrats_font_size < 20) congrats_font_size = 20;
+    if (congrats_font_size > 36) congrats_font_size = 36;
+    
+    int congrats_width = MeasureText(congrats, congrats_font_size);
+    int congrats_x = (screen_width - congrats_width) / 2;
+    int congrats_y = title_y + title_font_size + 40;
+    
+    DrawText(congrats, congrats_x, congrats_y, congrats_font_size, WORDLE_WHITE);
+    
+    // Statistics (letters used, etc.)
+    int total_letters_used = 0;
+    for (int i = 0; i < 26; i++) {
+        total_letters_used += state.stats.letter_counts[i];
+    }
+    
+    char stats_text[100];
+    sprintf(stats_text, "Letter tokens remaining: %d", total_letters_used);
+    int stats_font_size = (int)(screen_width * 0.025f);
+    if (stats_font_size < 16) stats_font_size = 16;
+    if (stats_font_size > 24) stats_font_size = 24;
+    
+    int stats_width = MeasureText(stats_text, stats_font_size);
+    int stats_x = (screen_width - stats_width) / 2;
+    int stats_y = congrats_y + congrats_font_size + 40;
+    
+    DrawText(stats_text, stats_x, stats_y, stats_font_size, WORDLE_YELLOW);
+    
+    // Navigation instructions
+    const char* space_instruction = "Press SPACE to return to home screen";
+    int space_font_size = (int)(screen_width * 0.03f);
+    if (space_font_size < 18) space_font_size = 18;
+    if (space_font_size > 32) space_font_size = 32;
+    
+    int space_width = MeasureText(space_instruction, space_font_size);
+    int space_x = (screen_width - space_width) / 2;
+    int space_y = screen_height / 2 + 80;
+    
+    DrawText(space_instruction, space_x, space_y, space_font_size, WORDLE_WHITE);
+    
+    const char* tab_instruction = "Press TAB to continue playing Wordle";
+    int tab_width = MeasureText(tab_instruction, space_font_size);
+    int tab_x = (screen_width - tab_width) / 2;
+    int tab_y = space_y + space_font_size + 20;
+    
+    DrawText(tab_instruction, tab_x, tab_y, space_font_size, WORDLE_GRAY);
+    
+    // Add some celebratory visual effects (optional sparkles)
+    // Simple animated stars/sparkles
+    for (int i = 0; i < 8; i++) {
+        float angle = (GetTime() + i * 0.5f) * 2.0f;
+        int star_x = (int)(title_x + title_width / 2 + cos(angle) * (100 + i * 10));
+        int star_y = (int)(title_y + title_font_size / 2 + sin(angle * 1.3f) * (50 + i * 5));
+        
+        char star_char = (i % 2 == 0) ? '*' : '+';
+        Color star_color = (i % 3 == 0) ? WORDLE_YELLOW : 
+                          (i % 3 == 1) ? WORDLE_GREEN : WORDLE_WHITE;
+        
+        DrawText((char[]){star_char, '\0'}, star_x, star_y, 20, star_color);
+    }
+}
+
 void render_system(GameState state) {
     ClearBackground(WORDLE_BG);
     
-    if (state.current_view == VIEW_WORDLE) {
+    if (state.current_view == VIEW_HOME_SCREEN) {
+        home_screen_render_system(state);
+    } else if (state.current_view == VIEW_WORDLE) {
         board_render_system(state);
         ui_render_system(state);
     } else if (state.current_view == VIEW_CROSSWORD) {
         crossword_render_system(state);
+    } else if (state.current_view == VIEW_CROSSWORD_COMPLETE) {
+        crossword_completion_render_system(state);
     }
 }

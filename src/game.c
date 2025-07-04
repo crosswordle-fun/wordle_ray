@@ -48,7 +48,7 @@ GameState create_game_state(const char* target_word) {
     state.system.user_has_scrolled = 0;
     state.system.auto_center_paused = 0;
     
-    state.current_view = VIEW_WORDLE;
+    state.current_view = VIEW_HOME_SCREEN;
     
     // Initialize crossword grid to empty
     for (int x = 0; x < 9; x++) {
@@ -65,6 +65,7 @@ GameState create_game_state(const char* target_word) {
     state.crossword.cursor_y = 0;
     state.crossword.cursor_direction = 0;  // Start in horizontal mode
     state.crossword.should_validate = 0;   // Initialize validation flag
+    state.crossword.puzzle_completed = 0;  // Initialize completion flag
     
     return state;
 }
@@ -334,11 +335,13 @@ GameState level_progression_system(GameState state) {
 
 GameState view_switching_system(GameState state) {
     if (state.system.tab_pressed) {
+        // Only allow tab switching between Wordle and Crossword modes
         if (state.current_view == VIEW_WORDLE) {
             state.current_view = VIEW_CROSSWORD;
-        } else {
+        } else if (state.current_view == VIEW_CROSSWORD) {
             state.current_view = VIEW_WORDLE;
         }
+        // Home screen and completion screen handle their own navigation
     }
     return state;
 }
@@ -615,7 +618,8 @@ GameState crossword_word_validation_system(GameState state) {
                 
                 if (all_words_correct) {
                     printf("Congratulations! Crossword puzzle completed!\n");
-                    // TODO: Add crossword completion handling
+                    state.crossword.puzzle_completed = 1;
+                    state.current_view = VIEW_CROSSWORD_COMPLETE;
                 }
             } else {
                 // Word is incorrect - provide letter-by-letter feedback
@@ -644,6 +648,76 @@ GameState new_level_system(GameState state) {
     // Reset camera to center on the first (and only) row
     state.system.camera_offset_y = 0.0f;
     state.system.target_camera_offset_y = 0.0f;
+    
+    return state;
+}
+
+GameState home_screen_input_system(GameState state) {
+    if (state.current_view != VIEW_HOME_SCREEN) {
+        return state;
+    }
+    
+    // Enter key starts the game
+    if (state.system.enter_pressed) {
+        // Initialize the first Wordle game
+        strcpy(state.core.target_word, get_random_word());
+        state.core.current_level = 1;
+        state.core.guesses_this_level = 0;
+        state.core.total_lifetime_guesses = 0;
+        state.core.play_state = GAME_STATE_INPUT;
+        state.core.level_complete = 0;
+        
+        // Reset input state
+        memset(state.input.current_word, 0, sizeof(state.input.current_word));
+        state.input.current_letter_pos = 0;
+        state.input.word_complete = 0;
+        state.input.should_submit = 0;
+        
+        // Reset history
+        state.history.level_guess_count = 0;
+        
+        // Switch to Wordle view
+        state.current_view = VIEW_WORDLE;
+        
+        // Reset camera
+        state.system.camera_offset_y = 0.0f;
+        state.system.target_camera_offset_y = 0.0f;
+        state.system.user_has_scrolled = 0;
+        state.system.auto_center_paused = 0;
+    }
+    
+    return state;
+}
+
+GameState crossword_completion_input_system(GameState state) {
+    if (state.current_view != VIEW_CROSSWORD_COMPLETE) {
+        return state;
+    }
+    
+    // Space key returns to home screen
+    if (state.system.space_pressed) {
+        // Reset crossword state for new game
+        for (int x = 0; x < 9; x++) {
+            for (int y = 0; y < 9; y++) {
+                state.crossword.grid[x][y] = '\0';
+                state.crossword.letter_states[x][y] = LETTER_UNKNOWN;
+                state.crossword.word_validated[x][y] = 0;
+            }
+        }
+        state.crossword.cursor_x = 1;
+        state.crossword.cursor_y = 0;
+        state.crossword.cursor_direction = 0;
+        state.crossword.should_validate = 0;
+        state.crossword.puzzle_completed = 0;
+        
+        // Return to home screen
+        state.current_view = VIEW_HOME_SCREEN;
+    }
+    
+    // Tab key returns to Wordle mode to continue playing
+    if (state.system.tab_pressed) {
+        state.current_view = VIEW_WORDLE;
+    }
     
     return state;
 }
