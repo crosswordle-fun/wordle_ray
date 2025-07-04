@@ -382,30 +382,6 @@ void crossword_render_system(GameState state) {
         }
     }
     
-    // Draw word number indicators
-    for (int word_num = 0; word_num < state.crossword.current_level.word_count; word_num++) {
-        CrosswordWord* word = &state.crossword.current_level.words[word_num];
-        int cell_x = grid_start_x + word->start_x * cell_size;
-        int cell_y = grid_start_y + word->start_y * cell_size;
-        
-        // Position number indicator in top-left corner of starting cell
-        char number_str[3];
-        sprintf(number_str, "%d", word_num + 1);
-        
-        int number_font_size = (int)(cell_size * 0.3f);
-        if (number_font_size < 12) number_font_size = 12;
-        if (number_font_size > 18) number_font_size = 18;
-        
-        // Offset position to top-left corner
-        int number_x = cell_x + 3;
-        int number_y = cell_y + 3;
-        
-        // Highlight current word number
-        Color number_color = (word_num == state.crossword.current_word_index) ? 
-                            WORDLE_YELLOW : WORDLE_GRAY;
-        
-        DrawText(number_str, number_x, number_y, number_font_size, number_color);
-    }
     
     // Word and direction indicator at top-left of grid
     const char* direction_text = (state.crossword.cursor_direction == 0) ? "ACROSS" : "DOWN";
