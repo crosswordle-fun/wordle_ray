@@ -222,16 +222,30 @@ void board_render_system(GameState state) {
 void ui_render_system(GameState state) {
     LayoutConfig layout = calculate_layout(state);
     
-    // Calculate top bar content and dimensions
-    char level_title[50];
-    sprintf(level_title, "WORDLE - LEVEL %d", state.core.current_level);
+    // Calculate main title dimensions
     int title_font_size = (int)(layout.screen_width * 0.05f);
     if (title_font_size < 24) title_font_size = 24;
     if (title_font_size > 48) title_font_size = 48;
     
-    int title_width = MeasureText(level_title, title_font_size);
-    int title_x = (layout.screen_width - title_width) / 2;
+    // Calculate tab-style title dimensions (just "CROSS WORDLE")
+    int cross_width = MeasureText("CROSS", title_font_size);
+    int space_width = MeasureText(" ", title_font_size);
+    int wordle_width = MeasureText("WORDLE", title_font_size);
+    
+    int title_total_width = cross_width + space_width + wordle_width;
+    int title_x = (layout.screen_width - title_total_width) / 2;
     int title_y = 20;  // Top margin
+    
+    // Calculate level info for separate row
+    char level_info[50];
+    sprintf(level_info, "LEVEL %d", state.core.current_level);
+    int level_font_size = (int)(layout.screen_width * 0.035f);
+    if (level_font_size < 20) level_font_size = 20;
+    if (level_font_size > 32) level_font_size = 32;
+    
+    int level_width = MeasureText(level_info, level_font_size);
+    int level_x = (layout.screen_width - level_width) / 2;
+    int level_y = title_y + title_font_size + 10;
     
     // Calculate debug info if present
     int debug_font_size = 0;
@@ -239,23 +253,23 @@ void ui_render_system(GameState state) {
     char debug_message[50] = "";
     if (state.system.debug_mode) {
         sprintf(debug_message, "DEBUG: Answer is %s", state.core.target_word);
-        debug_font_size = (int)(layout.screen_width * 0.035f);
-        if (debug_font_size < 20) debug_font_size = 20;
-        if (debug_font_size > 28) debug_font_size = 28;
-        debug_y = title_y + title_font_size + 10;
+        debug_font_size = (int)(layout.screen_width * 0.025f);
+        if (debug_font_size < 16) debug_font_size = 16;
+        if (debug_font_size > 24) debug_font_size = 24;
+        debug_y = level_y + level_font_size + 8;
     }
     
     // Calculate level stats
     char level_stats[100];
     sprintf(level_stats, "Guess %d this level | %d total guesses", 
             state.core.guesses_this_level + 1, state.core.total_lifetime_guesses);
-    int stats_font_size = (int)(layout.screen_width * 0.028f);
-    if (stats_font_size < 18) stats_font_size = 18;
-    if (stats_font_size > 24) stats_font_size = 24;
+    int stats_font_size = (int)(layout.screen_width * 0.025f);
+    if (stats_font_size < 16) stats_font_size = 16;
+    if (stats_font_size > 22) stats_font_size = 22;
     
     int stats_width = MeasureText(level_stats, stats_font_size);
     int stats_x = (layout.screen_width - stats_width) / 2;
-    int stats_y = (state.system.debug_mode) ? debug_y + debug_font_size + 10 : title_y + title_font_size + 10;
+    int stats_y = (state.system.debug_mode) ? debug_y + debug_font_size + 8 : level_y + level_font_size + 8;
     
     // Calculate top bar height
     int top_bar_height = stats_y + stats_font_size + 20;  // 20px bottom padding
@@ -264,8 +278,27 @@ void ui_render_system(GameState state) {
     Rectangle top_bar = {0, 0, layout.screen_width, top_bar_height};
     DrawRectangleRec(top_bar, WORDLE_WHITE);
     
-    // Draw top bar content with dark text
-    DrawText(level_title, title_x, title_y, title_font_size, WORDLE_BLACK);
+    // Draw main title with tab-style highlighting
+    int current_x = title_x;
+    DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
+    current_x += cross_width;
+    DrawText(" ", current_x, title_y, title_font_size, WORDLE_BLACK);
+    current_x += space_width;
+    
+    // Draw rounded background for active "WORDLE" tab
+    int tab_padding = 8;
+    Rectangle wordle_bg = {
+        current_x - tab_padding,
+        title_y - tab_padding,
+        wordle_width + 2 * tab_padding,
+        title_font_size + 2 * tab_padding
+    };
+    DrawRectangleRounded(wordle_bg, 0.3f, 6, WORDLE_GREEN);  // Green background for active tab
+    
+    DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_WHITE);  // Active tab with white text
+    
+    // Draw level info in separate row
+    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_DARK_GRAY);
     
     if (state.system.debug_mode) {
         int debug_width = MeasureText(debug_message, debug_font_size);
@@ -465,30 +498,68 @@ void ui_render_system(GameState state) {
 void crossword_render_system(GameState state) {
     int screen_width = GetScreenWidth();
     
-    // Calculate top bar for crossword title with level info
-    char title[100];
-    sprintf(title, "CROSSWORD - Level %d (%d words)", 
-            state.crossword.current_level.level, 
-            state.crossword.current_level.word_count);
+    // Calculate main title dimensions
     int title_font_size = 48;
-    int title_width = MeasureText(title, title_font_size);
-    int title_x = (screen_width - title_width) / 2;
+    
+    // Calculate tab-style title dimensions (just "CROSS WORDLE")
+    int cross_width = MeasureText("CROSS", title_font_size);
+    int space_width = MeasureText(" ", title_font_size);
+    int wordle_width = MeasureText("WORDLE", title_font_size);
+    
+    int title_total_width = cross_width + space_width + wordle_width;
+    int title_x = (screen_width - title_total_width) / 2;
     int title_y = 20;  // Top margin
     
+    // Calculate level info for separate row
+    char level_info[100];
+    sprintf(level_info, "Level %d (%d words)", 
+            state.crossword.current_level.level, 
+            state.crossword.current_level.word_count);
+    int level_font_size = 32;
+    
+    int level_width = MeasureText(level_info, level_font_size);
+    int level_x = (screen_width - level_width) / 2;
+    int level_y = title_y + title_font_size + 10;
+    
     // Calculate top bar height
-    int top_bar_height = title_font_size + 40;  // 40px total padding
+    int top_bar_height = level_y + level_font_size + 20;  // 20px bottom padding
     
     // Draw full-width white top bar
     Rectangle top_bar = {0, 0, screen_width, top_bar_height};
     DrawRectangleRec(top_bar, WORDLE_WHITE);
     
-    // Draw title with dark text
-    DrawText(title, title_x, title_y, title_font_size, WORDLE_BLACK);
+    // Draw main title with tab-style highlighting
+    int current_x = title_x;
+    
+    // Draw rounded background for active "CROSS" tab
+    int tab_padding = 8;
+    Rectangle cross_bg = {
+        current_x - tab_padding,
+        title_y - tab_padding,
+        cross_width + 2 * tab_padding,
+        title_font_size + 2 * tab_padding
+    };
+    DrawRectangleRounded(cross_bg, 0.3f, 6, WORDLE_YELLOW);  // Yellow background for active tab
+    
+    DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_BLACK);  // Active tab with black text
+    current_x += cross_width;
+    DrawText(" ", current_x, title_y, title_font_size, WORDLE_BLACK);
+    current_x += space_width;
+    DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
+    
+    // Draw level info in separate row
+    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_DARK_GRAY);
     
     // Calculate grid layout
     int grid_size = 9;
     int screen_height = GetScreenHeight();
-    int available_size = (screen_width < screen_height - 200) ? screen_width - 100 : screen_height - 300;
+    
+    // Calculate available space for grid (account for top bar and bottom margin)
+    int available_height = screen_height - top_bar_height - 100;  // 100px bottom margin
+    int available_width = screen_width - 100;  // 100px horizontal margin
+    
+    // Use the smaller dimension to ensure grid fits
+    int available_size = (available_width < available_height) ? available_width : available_height;
     int cell_size = available_size / grid_size;
     if (cell_size > 60) cell_size = 60;
     if (cell_size < 30) cell_size = 30;
@@ -496,7 +567,7 @@ void crossword_render_system(GameState state) {
     int grid_width = grid_size * cell_size;
     int grid_height = grid_size * cell_size;
     int grid_start_x = (screen_width - grid_width) / 2;
-    int grid_start_y = title_y + 80;
+    int grid_start_y = top_bar_height + (available_height - grid_height) / 2;
     
     // Draw grid
     for (int x = 0; x < grid_size; x++) {
@@ -714,7 +785,7 @@ void home_screen_render_system(GameState state) {
     int screen_height = GetScreenHeight();
     
     // Game title
-    const char* title = "CROSSWORDLE";
+    const char* title = "CROSS WORDLE";
     int title_font_size = (int)(screen_width * 0.08f);
     if (title_font_size < 48) title_font_size = 48;
     if (title_font_size > 96) title_font_size = 96;
@@ -783,7 +854,7 @@ void crossword_completion_render_system(GameState state) {
     int screen_height = GetScreenHeight();
     
     // Victory title
-    const char* victory_title = "CROSSWORD COMPLETED!";
+    const char* victory_title = "CROSS WORDLE COMPLETED!";
     int title_font_size = (int)(screen_width * 0.06f);
     if (title_font_size < 36) title_font_size = 36;
     if (title_font_size > 72) title_font_size = 72;

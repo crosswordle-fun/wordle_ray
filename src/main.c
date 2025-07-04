@@ -1,7 +1,7 @@
 #include "systems.h"
 
 int main(void) {
-    InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT, "Wordle");
+    InitWindow(DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT, "Cross Wordle");
     SetTargetFPS(60);
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     SetWindowMinSize(400, 300);
