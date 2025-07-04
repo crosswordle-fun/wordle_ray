@@ -170,7 +170,7 @@ void board_render_system(GameState state) {
                 // Add pulsing border effect for cursor
                 float pulse = (sin(state.ui.cursor_pulse_timer) + 1.0f) / 2.0f; // 0 to 1
                 int pulse_border_width = (int)(3 + pulse * 2); // 3 to 5 pixels
-                border_color = WORDLE_YELLOW;
+                border_color = (Color){0, 150, 255, 255};  // Bright blue border (same as crossword)
                 border_width = pulse_border_width;
             }
             
