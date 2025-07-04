@@ -5,46 +5,119 @@
 #define MAX_CROSSWORD_WORDS 10
 #define MAX_INTERSECTIONS 50
 
-// Helper function to select words with unique starting letters
+// Helper function to check if two words can intersect (share at least one letter)
+int can_words_intersect(const char* word1, const char* word2) {
+    for (int i = 0; i < WORD_LENGTH; i++) {
+        for (int j = 0; j < WORD_LENGTH; j++) {
+            if (word1[i] == word2[j]) {
+                return 1; // Found at least one matching letter
+            }
+        }
+    }
+    return 0; // No matching letters found
+}
+
+// Helper function to select words with unique starting letters AND intersection compatibility
 int select_words_with_unique_starting_letters(char selected_words[][WORD_LENGTH + 1], int count) {
     char used_letters[26] = {0}; // Track used starting letters (A-Z)
     int selected_count = 0;
     int total_words = get_total_words_count();
-    int attempts = 0;
-    const int max_attempts = 100; // Prevent infinite loops
+    const int max_attempts_per_word = 500; // Max attempts per word selection
     
-    // Generate random letter sequence and find words for each letter
-    while (selected_count < count && attempts < max_attempts) {
-        char target_letter = 'A' + GetRandomValue(0, 25);
-        attempts++;
-        
-        // Skip if we've already used this letter
-        if (used_letters[target_letter - 'A']) {
-            continue;
-        }
-        
-        // Find words starting with target_letter
-        int words_with_letter[50]; // Max words per letter we'll track
-        int word_count_for_letter = 0;
-        
-        for (int i = 0; i < total_words && word_count_for_letter < 50; i++) {
-            const char* word = get_word_by_index(i);
-            if (word && word[0] == target_letter) {
-                words_with_letter[word_count_for_letter++] = i;
-            }
-        }
-        
-        // If we found words for this letter, randomly select one
-        if (word_count_for_letter > 0) {
-            int random_word_index = GetRandomValue(0, word_count_for_letter - 1);
-            int selected_word_index = words_with_letter[random_word_index];
+    // Select first word randomly (no intersection constraints)
+    if (count > 0) {
+        int attempts = 0;
+        while (selected_count == 0 && attempts < max_attempts_per_word) {
+            char target_letter = 'A' + GetRandomValue(0, 25);
+            attempts++;
             
-            const char* word = get_word_by_index(selected_word_index);
-            if (word) {
-                strcpy(selected_words[selected_count], word);
-                used_letters[target_letter - 'A'] = 1;
-                selected_count++;
+            // Skip if we've already used this letter
+            if (used_letters[target_letter - 'A']) {
+                continue;
             }
+            
+            // Find words starting with target_letter
+            int words_with_letter[50];
+            int word_count_for_letter = 0;
+            
+            for (int i = 0; i < total_words && word_count_for_letter < 50; i++) {
+                const char* word = get_word_by_index(i);
+                if (word && word[0] == target_letter) {
+                    words_with_letter[word_count_for_letter++] = i;
+                }
+            }
+            
+            // Select first word randomly from this letter's words
+            if (word_count_for_letter > 0) {
+                int random_word_index = GetRandomValue(0, word_count_for_letter - 1);
+                int selected_word_index = words_with_letter[random_word_index];
+                
+                const char* word = get_word_by_index(selected_word_index);
+                if (word) {
+                    strcpy(selected_words[selected_count], word);
+                    used_letters[target_letter - 'A'] = 1;
+                    selected_count++;
+                    printf("Selected first word: %s\n", word);
+                }
+            }
+        }
+    }
+    
+    // Select subsequent words (must intersect with at least one previous word)
+    while (selected_count < count) {
+        int word_found = 0;
+        int attempts = 0;
+        
+        while (!word_found && attempts < max_attempts_per_word) {
+            char target_letter = 'A' + GetRandomValue(0, 25);
+            attempts++;
+            
+            // Skip if we've already used this letter
+            if (used_letters[target_letter - 'A']) {
+                continue;
+            }
+            
+            // Find words starting with target_letter
+            int words_with_letter[50];
+            int word_count_for_letter = 0;
+            
+            for (int i = 0; i < total_words && word_count_for_letter < 50; i++) {
+                const char* word = get_word_by_index(i);
+                if (word && word[0] == target_letter) {
+                    words_with_letter[word_count_for_letter++] = i;
+                }
+            }
+            
+            // Try each word starting with this letter
+            for (int w = 0; w < word_count_for_letter && !word_found; w++) {
+                const char* candidate_word = get_word_by_index(words_with_letter[w]);
+                if (!candidate_word) continue;
+                
+                // Check if this candidate can intersect with ANY previously selected word
+                int can_connect = 0;
+                for (int prev = 0; prev < selected_count; prev++) {
+                    if (can_words_intersect(candidate_word, selected_words[prev])) {
+                        can_connect = 1;
+                        printf("Found intersection: '%s' can connect to '%s'\n", candidate_word, selected_words[prev]);
+                        break;
+                    }
+                }
+                
+                // If it can connect, select this word
+                if (can_connect) {
+                    strcpy(selected_words[selected_count], candidate_word);
+                    used_letters[target_letter - 'A'] = 1;
+                    selected_count++;
+                    word_found = 1;
+                    printf("Selected word %d: %s\n", selected_count, candidate_word);
+                }
+            }
+        }
+        
+        // If we couldn't find a compatible word after many attempts, break
+        if (!word_found) {
+            printf("Could not find compatible word %d after %d attempts\n", selected_count + 1, max_attempts_per_word);
+            break;
         }
     }
     
@@ -88,24 +161,60 @@ int select_random_words_fallback(char selected_words[][WORD_LENGTH + 1], int cou
     return selected_count;
 }
 
-// Main function to select random words with unique starting letters (with fallback)
+// Main function to select random words with unique starting letters (with safe fallback)
 int select_random_words(char selected_words[][WORD_LENGTH + 1], int count) {
     if (count > MAX_CROSSWORD_WORDS) {
         count = MAX_CROSSWORD_WORDS;
     }
     
-    // First try to select words with unique starting letters
+    // Try to select words with unique starting letters and intersection compatibility
     int selected_count = select_words_with_unique_starting_letters(selected_words, count);
     
-    // If we didn't get enough words with unique letters, fill remaining with fallback
-    if (selected_count < count) {
-        char remaining_words[MAX_CROSSWORD_WORDS][WORD_LENGTH + 1];
-        int remaining_count = select_random_words_fallback(remaining_words, count - selected_count);
+    // If we didn't get enough compatible words, try fallback WITH intersection checking
+    if (selected_count < count && selected_count > 0) {
+        printf("Trying fallback selection for remaining %d words...\n", count - selected_count);
         
-        // Add the remaining words to our selection
-        for (int i = 0; i < remaining_count && selected_count < count; i++) {
-            strcpy(selected_words[selected_count], remaining_words[i]);
-            selected_count++;
+        int total_words = get_total_words_count();
+        int attempts = 0;
+        const int max_fallback_attempts = 1000;
+        
+        while (selected_count < count && attempts < max_fallback_attempts) {
+            int random_index = GetRandomValue(0, total_words - 1);
+            const char* candidate_word = get_word_by_index(random_index);
+            attempts++;
+            
+            if (!candidate_word) continue;
+            
+            // Check if already selected
+            int already_selected = 0;
+            for (int i = 0; i < selected_count; i++) {
+                if (strcmp(selected_words[i], candidate_word) == 0) {
+                    already_selected = 1;
+                    break;
+                }
+            }
+            
+            if (already_selected) continue;
+            
+            // Check if it can intersect with any previously selected word
+            int can_connect = 0;
+            for (int prev = 0; prev < selected_count; prev++) {
+                if (can_words_intersect(candidate_word, selected_words[prev])) {
+                    can_connect = 1;
+                    break;
+                }
+            }
+            
+            // Only add if it can connect
+            if (can_connect) {
+                strcpy(selected_words[selected_count], candidate_word);
+                selected_count++;
+                printf("Fallback selected word %d: %s\n", selected_count, candidate_word);
+            }
+        }
+        
+        if (attempts >= max_fallback_attempts) {
+            printf("Fallback exhausted after %d attempts, proceeding with %d words\n", max_fallback_attempts, selected_count);
         }
     }
     
@@ -201,6 +310,12 @@ CrosswordLevel generate_crossword(int word_count, int grid_width, int grid_heigh
     char selected_words[MAX_CROSSWORD_WORDS][WORD_LENGTH + 1];
     int actual_word_count = select_random_words(selected_words, word_count);
     
+    // Debug output
+    printf("Generating crossword: requested %d words, selected %d words\n", word_count, actual_word_count);
+    for (int i = 0; i < actual_word_count; i++) {
+        printf("  Word %d: %s\n", i + 1, selected_words[i]);
+    }
+    
     // Array to track placed words
     PlacedWord placed_words[MAX_CROSSWORD_WORDS];
     int placed_count = 0;
@@ -222,6 +337,9 @@ CrosswordLevel generate_crossword(int word_count, int grid_width, int grid_heigh
             placed_words[placed_count].direction = 0;
             placed_words[placed_count].placed = 1;
             placed_count++;
+            printf("Placed first word '%s' horizontally at (%d,%d)\n", selected_words[0], start_x, start_y);
+        } else {
+            printf("Failed to place first word '%s' at (%d,%d)\n", selected_words[0], start_x, start_y);
         }
     }
     
@@ -229,14 +347,56 @@ CrosswordLevel generate_crossword(int word_count, int grid_width, int grid_heigh
     for (int word_idx = 1; word_idx < actual_word_count; word_idx++) {
         int word_placed = 0;
         
-        // Try to intersect with each already-placed word
-        for (int placed_idx = 0; placed_idx < placed_count && !word_placed; placed_idx++) {
-            IntersectionCandidate candidates[MAX_INTERSECTIONS];
-            int candidate_count = find_intersections(placed_words[placed_idx].word, 
-                                                   selected_words[word_idx], 
-                                                   candidates, MAX_INTERSECTIONS);
+        // Special case for 2-word crosswords - try multiple simple placements
+        if (word_count == 2 && placed_count == 1) {
+            // Try different intersection points for the second word
+            for (int pos1 = 0; pos1 < WORD_LENGTH && !word_placed; pos1++) {
+                for (int pos2 = 0; pos2 < WORD_LENGTH && !word_placed; pos2++) {
+                    // Check if letters match at this potential intersection
+                    if (placed_words[0].word[pos1] == selected_words[word_idx][pos2]) {
+                        // Calculate placement for vertical word through horizontal word
+                        int intersection_x = placed_words[0].start_x + pos1;
+                        int intersection_y = placed_words[0].start_y;
+                        
+                        int new_start_x = intersection_x;
+                        int new_start_y = intersection_y - pos2;
+                        
+                        if (new_start_y >= 0 && new_start_y + WORD_LENGTH <= grid_height &&
+                            can_place_word(level.solution, grid_width, grid_height,
+                                          selected_words[word_idx], new_start_x, new_start_y, 1)) {
+                            
+                            place_word_in_grid(level.solution, level.word_mask, grid_width, grid_height,
+                                              selected_words[word_idx], new_start_x, new_start_y, 1);
+                            
+                            strcpy(placed_words[placed_count].word, selected_words[word_idx]);
+                            placed_words[placed_count].start_x = new_start_x;
+                            placed_words[placed_count].start_y = new_start_y;
+                            placed_words[placed_count].direction = 1;
+                            placed_words[placed_count].placed = 1;
+                            placed_count++;
+                            word_placed = 1;
+                            printf("Placed second word '%s' vertically at (%d,%d) intersecting at letter '%c'\n", 
+                                   selected_words[word_idx], new_start_x, new_start_y, placed_words[0].word[pos1]);
+                        }
+                    }
+                }
+            }
             
-            // Try each intersection candidate
+            if (!word_placed) {
+                printf("Failed to find any valid intersection for '%s' with '%s'\n", selected_words[word_idx], placed_words[0].word);
+            }
+        }
+        
+        // If simple placement didn't work, try intersection-based placement
+        if (!word_placed) {
+            // Try to intersect with each already-placed word
+            for (int placed_idx = 0; placed_idx < placed_count && !word_placed; placed_idx++) {
+                IntersectionCandidate candidates[MAX_INTERSECTIONS];
+                int candidate_count = find_intersections(placed_words[placed_idx].word, 
+                                                       selected_words[word_idx], 
+                                                       candidates, MAX_INTERSECTIONS);
+                
+                // Try each intersection candidate
             for (int i = 0; i < candidate_count && !word_placed; i++) {
                 IntersectionCandidate* candidate = &candidates[i];
                 
@@ -281,12 +441,15 @@ CrosswordLevel generate_crossword(int word_count, int grid_width, int grid_heigh
                     word_placed = 1;
                 }
             }
+            }
         }
     }
     
     // Set up the CrosswordLevel structure
     level.level = 1;
     level.word_count = placed_count;
+    
+    printf("Final result: placed %d out of %d requested words\n", placed_count, word_count);
     
     // Copy placed words to CrosswordWord format
     for (int i = 0; i < placed_count; i++) {

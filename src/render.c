@@ -465,8 +465,11 @@ void ui_render_system(GameState state) {
 void crossword_render_system(GameState state) {
     int screen_width = GetScreenWidth();
     
-    // Calculate top bar for crossword title
-    const char* title = "CROSSWORD";
+    // Calculate top bar for crossword title with level info
+    char title[100];
+    sprintf(title, "CROSSWORD - Level %d (%d words)", 
+            state.crossword.current_level.level, 
+            state.crossword.current_level.word_count);
     int title_font_size = 48;
     int title_width = MeasureText(title, title_font_size);
     int title_x = (screen_width - title_width) / 2;

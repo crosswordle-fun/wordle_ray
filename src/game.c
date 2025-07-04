@@ -694,15 +694,12 @@ GameState crossword_input_system(GameState state) {
 }
 
 CrosswordLevel get_crossword_level(int level) {
-    // Generate crossword based on level
-    int word_count = 3;  // Start with 3 words for level 1
+    // Generate crossword based on level - start with 2 words, then 3, 4, 5, etc.
+    int word_count = 1 + level;  // Level 1 = 2 words, Level 2 = 3 words, etc.
     
-    // Increase word count for higher levels (up to 10 words max)
-    if (level > 1) {
-        word_count = 3 + (level - 1);
-        if (word_count > 10) {
-            word_count = 10;
-        }
+    // Cap at 10 words maximum
+    if (word_count > 10) {
+        word_count = 10;
     }
     
     // Generate a crossword with the specified word count
@@ -809,9 +806,30 @@ GameState crossword_word_validation_system(GameState state) {
                 }
                 
                 if (all_words_correct) {
-                    printf("Congratulations! Crossword puzzle completed!\n");
-                    state.crossword.puzzle_completed = 1;
-                    state.current_view = VIEW_CROSSWORD_COMPLETE;
+                    printf("Congratulations! Crossword level %d completed!\n", state.crossword.current_level.level);
+                    
+                    // Advance to next level
+                    int next_level = state.crossword.current_level.level + 1;
+                    state.crossword.current_level = get_crossword_level(next_level);
+                    
+                    // Reset grid for new level
+                    for (int x = 0; x < 9; x++) {
+                        for (int y = 0; y < 9; y++) {
+                            state.crossword.grid[x][y] = '\0';
+                            state.crossword.letter_states[x][y] = LETTER_UNKNOWN;
+                            state.crossword.word_validated[x][y] = 0;
+                        }
+                    }
+                    
+                    // Reset cursor to first word of new level
+                    state.crossword.current_word_index = 0;
+                    state.crossword.cursor_x = state.crossword.current_level.words[0].start_x;
+                    state.crossword.cursor_y = state.crossword.current_level.words[0].start_y;
+                    state.crossword.cursor_direction = state.crossword.current_level.words[0].direction;
+                    state.crossword.should_validate = 0;
+                    state.crossword.puzzle_completed = 0;
+                    
+                    printf("Starting crossword level %d with %d words!\n", next_level, state.crossword.current_level.word_count);
                 } else {
                     // Find next incomplete word and position cursor there
                     int next_word_index = find_next_incomplete_word(state);
