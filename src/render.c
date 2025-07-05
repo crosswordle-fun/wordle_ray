@@ -168,6 +168,11 @@ void board_render_system(GameState state) {
             continue;
         }
         
+        // Skip rendering input row when level is complete
+        if (row == layout.current_input_row && state.core.level_complete) {
+            continue;
+        }
+        
         for (int col = 0; col < WORD_LENGTH; col++) {
             int cell_x = layout.board_start_x + col * (layout.cell_size + layout.cell_spacing);
             int cell_y = row_y;
