@@ -95,6 +95,10 @@ typedef struct {
     int transitioning_view;                   // Flag for view transition in progress
     int letter_easing;                        // Flag for letter ease animation in progress
     
+    // View transition state
+    GameViewState previous_view;              // View we're transitioning from
+    int transition_direction;                 // 0=left-to-right, 1=right-to-left
+    
     // Particle effects
     int particle_count;                       // Number of active particles
     Vector2 particles[50];                    // Particle positions (max 50)

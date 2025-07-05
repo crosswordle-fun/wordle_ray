@@ -62,6 +62,23 @@ GameState animation_update_system(GameState state) {
         }
     }
     
+    // Update view transition animation
+    if (state.ui.transitioning_view) {
+        if (state.settings.animations_enabled) {
+            state.ui.view_transition_timer += frame_time;
+            if (state.ui.view_transition_timer >= VIEW_TRANSITION_DURATION) {
+                // Transition complete
+                state.ui.transitioning_view = 0;
+                state.ui.view_transition_timer = 0.0f;
+                // previous_view and transition_direction can be left as-is for next transition
+            }
+        } else {
+            // Skip animation if animations are disabled
+            state.ui.transitioning_view = 0;
+            state.ui.view_transition_timer = 0.0f;
+        }
+    }
+    
     // Update particles
     update_particles(&state, frame_time);
     

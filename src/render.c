@@ -1,5 +1,6 @@
 #include "systems.h"
 #include <math.h>
+#include "rlgl.h"
 
 LayoutConfig calculate_layout(GameState state) {
     LayoutConfig layout = {0};
@@ -40,6 +41,113 @@ Color get_color_for_letter_state(LetterState state) {
     if (state == LETTER_WRONG_POS) return WORDLE_YELLOW;
     if (state == LETTER_NOT_IN_WORD) return WORDLE_GRAY;
     return WORDLE_WHITE;
+}
+
+void render_animated_tab(GameState state) {
+    // Render animated tab highlighting during view transitions
+    if (!state.ui.transitioning_view || !state.settings.animations_enabled) return;
+    
+    float progress = state.ui.view_transition_timer / VIEW_TRANSITION_DURATION;
+    progress = easeInOutQuad(progress);
+    
+    int screen_width = GetScreenWidth();
+    int title_font_size = (int)(screen_width * 0.05f);
+    if (title_font_size < 24) title_font_size = 24;
+    if (title_font_size > 48) title_font_size = 48;
+    
+    // Calculate tab positions and dimensions
+    int cross_width = MeasureText("CROSS", title_font_size);
+    int space_width = MeasureText(" ", title_font_size);
+    int wordle_width = MeasureText("WORDLE", title_font_size);
+    
+    int title_total_width = cross_width + space_width + wordle_width;
+    int title_x = (screen_width - title_total_width) / 2;
+    int title_y = 20;
+    
+    int tab_padding = 8;
+    
+    // Calculate start and end positions for tab highlighting
+    int cross_tab_x = title_x - tab_padding;
+    int cross_tab_width = cross_width + 2 * tab_padding;
+    
+    int wordle_tab_x = title_x + cross_width + space_width - tab_padding;
+    int wordle_tab_width = wordle_width + 2 * tab_padding;
+    
+    // Interpolate tab position and size based on transition direction and progress
+    int animated_tab_x, animated_tab_width;
+    Color animated_tab_color;
+    Color cross_text_color, wordle_text_color;
+    
+    if (state.current_view == VIEW_CROSSWORD) {
+        // Transitioning TO crossword (CROSS tab becomes active)
+        animated_tab_x = (int)(wordle_tab_x + (cross_tab_x - wordle_tab_x) * progress);
+        animated_tab_width = (int)(wordle_tab_width + (cross_tab_width - wordle_tab_width) * progress);
+        
+        // Interpolate color from green to yellow
+        float inv_progress = 1.0f - progress;
+        animated_tab_color = (Color){
+            (unsigned char)(WORDLE_GREEN.r * inv_progress + WORDLE_YELLOW.r * progress),
+            (unsigned char)(WORDLE_GREEN.g * inv_progress + WORDLE_YELLOW.g * progress), 
+            (unsigned char)(WORDLE_GREEN.b * inv_progress + WORDLE_YELLOW.b * progress),
+            255
+        };
+        
+        // Text colors transition
+        cross_text_color = (Color){
+            (unsigned char)(WORDLE_GRAY.r * inv_progress + WORDLE_BLACK.r * progress),
+            (unsigned char)(WORDLE_GRAY.g * inv_progress + WORDLE_BLACK.g * progress),
+            (unsigned char)(WORDLE_GRAY.b * inv_progress + WORDLE_BLACK.b * progress),
+            255
+        };
+        wordle_text_color = (Color){
+            (unsigned char)(WORDLE_WHITE.r * inv_progress + WORDLE_GRAY.r * progress),
+            (unsigned char)(WORDLE_WHITE.g * inv_progress + WORDLE_GRAY.g * progress),
+            (unsigned char)(WORDLE_WHITE.b * inv_progress + WORDLE_GRAY.b * progress),
+            255
+        };
+        
+    } else {
+        // Transitioning TO wordle (WORDLE tab becomes active)
+        animated_tab_x = (int)(cross_tab_x + (wordle_tab_x - cross_tab_x) * progress);
+        animated_tab_width = (int)(cross_tab_width + (wordle_tab_width - cross_tab_width) * progress);
+        
+        // Interpolate color from yellow to green
+        float inv_progress = 1.0f - progress;
+        animated_tab_color = (Color){
+            (unsigned char)(WORDLE_YELLOW.r * inv_progress + WORDLE_GREEN.r * progress),
+            (unsigned char)(WORDLE_YELLOW.g * inv_progress + WORDLE_GREEN.g * progress),
+            (unsigned char)(WORDLE_YELLOW.b * inv_progress + WORDLE_GREEN.b * progress),
+            255
+        };
+        
+        // Text colors transition
+        cross_text_color = (Color){
+            (unsigned char)(WORDLE_BLACK.r * inv_progress + WORDLE_GRAY.r * progress),
+            (unsigned char)(WORDLE_BLACK.g * inv_progress + WORDLE_GRAY.g * progress),
+            (unsigned char)(WORDLE_BLACK.b * inv_progress + WORDLE_GRAY.b * progress),
+            255
+        };
+        wordle_text_color = (Color){
+            (unsigned char)(WORDLE_GRAY.r * inv_progress + WORDLE_WHITE.r * progress),
+            (unsigned char)(WORDLE_GRAY.g * inv_progress + WORDLE_WHITE.g * progress),
+            (unsigned char)(WORDLE_GRAY.b * inv_progress + WORDLE_WHITE.b * progress),
+            255
+        };
+    }
+    
+    // Draw the animated tab background
+    Rectangle animated_tab_bg = {
+        animated_tab_x,
+        title_y - tab_padding,
+        animated_tab_width,
+        title_font_size + 2 * tab_padding
+    };
+    DrawRectangleRounded(animated_tab_bg, 0.3f, 6, animated_tab_color);
+    
+    // Draw the tab text with animated colors
+    DrawText("CROSS", title_x, title_y, title_font_size, cross_text_color);
+    DrawText(" ", title_x + cross_width, title_y, title_font_size, WORDLE_WHITE);
+    DrawText("WORDLE", title_x + cross_width + space_width, title_y, title_font_size, wordle_text_color);
 }
 
 void board_render_system(GameState state) {
@@ -1023,14 +1131,68 @@ void crossword_completion_render_system(GameState state) {
 void render_system(GameState state) {
     ClearBackground(WORDLE_BG);
     
-    if (state.current_view == VIEW_HOME_SCREEN) {
-        home_screen_render_system(state);
-    } else if (state.current_view == VIEW_WORDLE) {
-        board_render_system(state);
-        ui_render_system(state);
-    } else if (state.current_view == VIEW_CROSSWORD) {
-        crossword_render_system(state);
-    } else if (state.current_view == VIEW_CROSSWORD_COMPLETE) {
-        crossword_completion_render_system(state);
+    if (state.ui.transitioning_view && 
+        state.settings.animations_enabled &&
+        (state.current_view == VIEW_WORDLE || state.current_view == VIEW_CROSSWORD) &&
+        (state.ui.previous_view == VIEW_WORDLE || state.ui.previous_view == VIEW_CROSSWORD)) {
+        
+        // Dual-view rendering during transition
+        // Window resizing is handled automatically since we recalculate screen_width each frame
+        float progress = state.ui.view_transition_timer / VIEW_TRANSITION_DURATION;
+        progress = easeInOutQuad(progress); // Apply smooth easing
+        
+        int screen_width = GetScreenWidth();
+        
+        // Calculate slide offsets
+        int current_view_offset = 0;
+        int previous_view_offset = 0;
+        
+        if (state.ui.transition_direction == 0) {
+            // Left-to-right: Wordle→Crossword (Wordle slides left, Crossword slides in from right)
+            current_view_offset = (int)(screen_width * (1.0f - progress));  // Incoming view slides in from right
+            previous_view_offset = -(int)(screen_width * progress);          // Outgoing view slides left
+        } else {
+            // Right-to-left: Crossword→Wordle (Crossword slides left, Wordle slides in from right)
+            current_view_offset = (int)(screen_width * (1.0f - progress));  // Incoming view slides in from right  
+            previous_view_offset = -(int)(screen_width * progress);          // Outgoing view slides left
+        }
+        
+        // Render previous view with offset using translation matrix
+        rlPushMatrix();
+        rlTranslatef((float)previous_view_offset, 0.0f, 0.0f);
+        if (state.ui.previous_view == VIEW_WORDLE) {
+            board_render_system(state);
+            ui_render_system(state);
+        } else if (state.ui.previous_view == VIEW_CROSSWORD) {
+            crossword_render_system(state);
+        }
+        rlPopMatrix();
+        
+        // Render current view with offset using translation matrix
+        rlPushMatrix();
+        rlTranslatef((float)current_view_offset, 0.0f, 0.0f);
+        if (state.current_view == VIEW_WORDLE) {
+            board_render_system(state);
+            ui_render_system(state);
+        } else if (state.current_view == VIEW_CROSSWORD) {
+            crossword_render_system(state);
+        }
+        rlPopMatrix();
+        
+        // Render animated tab overlay during transitions
+        render_animated_tab(state);
+        
+    } else {
+        // Normal single-view rendering
+        if (state.current_view == VIEW_HOME_SCREEN) {
+            home_screen_render_system(state);
+        } else if (state.current_view == VIEW_WORDLE) {
+            board_render_system(state);
+            ui_render_system(state);
+        } else if (state.current_view == VIEW_CROSSWORD) {
+            crossword_render_system(state);
+        } else if (state.current_view == VIEW_CROSSWORD_COMPLETE) {
+            crossword_completion_render_system(state);
+        }
     }
 }
