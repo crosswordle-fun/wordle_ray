@@ -651,7 +651,9 @@ void crossword_render_system(GameState state) {
     int screen_width = GetScreenWidth();
     
     // Calculate main title dimensions
-    int title_font_size = 48;
+    int title_font_size = (int)(screen_width * 0.05f);
+    if (title_font_size < 24) title_font_size = 24;
+    if (title_font_size > 48) title_font_size = 48;
     
     // Calculate tab-style title dimensions (just "CROSS WORDLE")
     int cross_width = MeasureText("CROSS", title_font_size);
