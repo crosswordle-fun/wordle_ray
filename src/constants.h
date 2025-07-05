@@ -17,7 +17,9 @@
 
 // Animation constants
 #define LETTER_REVEAL_DURATION 0.6f          // Total time for letter reveal animation
+#define LETTER_REVEAL_TOTAL_DURATION 2.0f    // Total duration including all letters
 #define LETTER_REVEAL_STAGGER 0.1f           // Delay between each letter reveal
+#define RESULT_DISPLAY_DURATION 1.5f         // Duration to show result before next input
 #define LETTER_POP_DURATION 0.25f            // Duration of letter typing pop animation
 #define LETTER_POP_SCALE 1.05f               // Scale factor for letter pop (subtle)
 #define CURSOR_PULSE_SPEED 2.0f              // Speed of cursor pulse animation

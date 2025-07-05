@@ -89,6 +89,7 @@ typedef struct {
     float letter_ease_timer;                  // Letter ease in/out animation timer
     float home_tab_animation_timer;           // Home screen ping-pong tab animation timer
     float home_tab_pause_timer;               // Home screen pause timer between animations
+    float completion_animation_timer;         // Crossword completion animation timer
     
     // Animation states
     int letter_revealing;                     // Flag for letter reveal animation in progress
@@ -98,6 +99,7 @@ typedef struct {
     int letter_easing;                        // Flag for letter ease animation in progress
     int home_tab_animating_to_cross;          // Flag for home tab animation direction (1=to cross, 0=to wordle)
     int home_tab_is_paused;                   // Flag for whether home tab is in pause state
+    int show_level_complete;                  // Flag to show level complete message
     
     // View transition state
     GameViewState previous_view;              // View we're transitioning from
@@ -145,12 +147,16 @@ typedef struct {
     int cursor_x;           // Current cursor position X (0-8)
     int cursor_y;           // Current cursor position Y (0-8)
     int cursor_direction;   // 0=horizontal (right), 1=vertical (down)
+    int direction;          // Same as cursor_direction for compatibility
     CrosswordLevel current_level; // Current puzzle data
+    CrosswordLevel level;   // Same as current_level for compatibility
     int should_validate;    // Set to 1 when Enter is pressed to validate current word
     LetterState letter_states[9][9]; // Validation states for each cell
     int word_validated[9][9]; // Track which words have been validated
     int puzzle_completed;   // Set to 1 when entire crossword is solved
     int current_word_index; // Currently selected word (0-based)
+    int show_error;         // Flag to show error messages
+    char error_message[100]; // Error message text
 } CrosswordState;
 
 typedef struct {
@@ -200,5 +206,15 @@ typedef struct {
     int current_input_row;
     int row_height;
 } LayoutConfig;
+
+typedef struct {
+    int grid_width;
+    int grid_height;
+    int cell_size;
+    int grid_pixel_width;
+    int grid_pixel_height;
+    int grid_start_x;
+    int grid_start_y;
+} CrosswordLayoutConfig;
 
 #endif
