@@ -87,6 +87,8 @@ typedef struct {
     float level_complete_timer;               // Level completion celebration timer
     float view_transition_timer;              // View switching animation timer
     float letter_ease_timer;                  // Letter ease in/out animation timer
+    float home_tab_animation_timer;           // Home screen ping-pong tab animation timer
+    float home_tab_pause_timer;               // Home screen pause timer between animations
     
     // Animation states
     int letter_revealing;                     // Flag for letter reveal animation in progress
@@ -94,6 +96,8 @@ typedef struct {
     int celebrating_level;                    // Flag for level completion celebration
     int transitioning_view;                   // Flag for view transition in progress
     int letter_easing;                        // Flag for letter ease animation in progress
+    int home_tab_animating_to_cross;          // Flag for home tab animation direction (1=to cross, 0=to wordle)
+    int home_tab_is_paused;                   // Flag for whether home tab is in pause state
     
     // View transition state
     GameViewState previous_view;              // View we're transitioning from

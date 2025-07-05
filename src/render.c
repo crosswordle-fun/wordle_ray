@@ -1004,27 +1004,126 @@ void home_screen_render_system(GameState state) {
     int screen_width = GetScreenWidth();
     int screen_height = GetScreenHeight();
     
-    // Game title
-    const char* title = "CROSS WORDLE";
+    // Game title with tab-style highlighting
     int title_font_size = (int)(screen_width * 0.08f);
     if (title_font_size < 48) title_font_size = 48;
     if (title_font_size > 96) title_font_size = 96;
     
-    int title_width = MeasureText(title, title_font_size);
-    int title_x = (screen_width - title_width) / 2;
+    // Calculate tab-style title dimensions (just "CROSS WORDLE")
+    int cross_width = MeasureText("CROSS", title_font_size);
+    int space_width = MeasureText(" ", title_font_size);
+    int wordle_width = MeasureText("WORDLE", title_font_size);
+    
+    int title_total_width = cross_width + space_width + wordle_width;
+    int title_x = (screen_width - title_total_width) / 2;
     int title_y = screen_height / 3;
     
-    // Draw background rectangle for home title
+    // Draw background rectangle for home title (covers both tabs)
     int title_bg_padding = 12;
     Rectangle title_bg = {
         title_x - title_bg_padding,
         title_y - title_bg_padding,
-        title_width + 2 * title_bg_padding,
+        title_total_width + 2 * title_bg_padding,
         title_font_size + 2 * title_bg_padding
     };
     DrawRectangleRec(title_bg, (Color){0, 0, 0, 180});  // Semi-transparent black
     
-    DrawText(title, title_x, title_y, title_font_size, WORDLE_WHITE);
+    // Draw animated tab-style title with ping-pong highlighting
+    int tab_padding = 8;
+    
+    // Calculate animation progress (0 to 1)
+    float progress;
+    if (state.ui.home_tab_is_paused) {
+        // During pause, show completed animation state
+        progress = 1.0f;
+    } else {
+        // During animation, interpolate progress
+        progress = state.ui.home_tab_animation_timer / HOME_TAB_ANIMATION_DURATION;
+        progress = easeInOutQuad(progress);
+    }
+    
+    // Calculate tab positions and dimensions
+    int cross_tab_x = title_x - tab_padding;
+    int cross_tab_width = cross_width + 2 * tab_padding;
+    
+    int wordle_tab_x = title_x + cross_width + space_width - tab_padding;
+    int wordle_tab_width = wordle_width + 2 * tab_padding;
+    
+    // Interpolate tab position and size based on animation direction and progress
+    int animated_tab_x, animated_tab_width;
+    Color animated_tab_color;
+    Color cross_text_color, wordle_text_color;
+    
+    if (state.ui.home_tab_animating_to_cross) {
+        // Animating TO cross (CROSS tab becomes active)
+        animated_tab_x = (int)(wordle_tab_x + (cross_tab_x - wordle_tab_x) * progress);
+        animated_tab_width = (int)(wordle_tab_width + (cross_tab_width - wordle_tab_width) * progress);
+        
+        // Interpolate color from green to yellow
+        float inv_progress = 1.0f - progress;
+        animated_tab_color = (Color){
+            (unsigned char)(WORDLE_GREEN.r * inv_progress + WORDLE_YELLOW.r * progress),
+            (unsigned char)(WORDLE_GREEN.g * inv_progress + WORDLE_YELLOW.g * progress), 
+            (unsigned char)(WORDLE_GREEN.b * inv_progress + WORDLE_YELLOW.b * progress),
+            255
+        };
+        
+        // Text colors transition
+        cross_text_color = (Color){
+            (unsigned char)(WORDLE_GRAY.r * inv_progress + WORDLE_WHITE.r * progress),
+            (unsigned char)(WORDLE_GRAY.g * inv_progress + WORDLE_WHITE.g * progress),
+            (unsigned char)(WORDLE_GRAY.b * inv_progress + WORDLE_WHITE.b * progress),
+            255
+        };
+        wordle_text_color = (Color){
+            (unsigned char)(WORDLE_WHITE.r * inv_progress + WORDLE_GRAY.r * progress),
+            (unsigned char)(WORDLE_WHITE.g * inv_progress + WORDLE_GRAY.g * progress),
+            (unsigned char)(WORDLE_WHITE.b * inv_progress + WORDLE_GRAY.b * progress),
+            255
+        };
+        
+    } else {
+        // Animating TO wordle (WORDLE tab becomes active)
+        animated_tab_x = (int)(cross_tab_x + (wordle_tab_x - cross_tab_x) * progress);
+        animated_tab_width = (int)(cross_tab_width + (wordle_tab_width - cross_tab_width) * progress);
+        
+        // Interpolate color from yellow to green
+        float inv_progress = 1.0f - progress;
+        animated_tab_color = (Color){
+            (unsigned char)(WORDLE_YELLOW.r * inv_progress + WORDLE_GREEN.r * progress),
+            (unsigned char)(WORDLE_YELLOW.g * inv_progress + WORDLE_GREEN.g * progress),
+            (unsigned char)(WORDLE_YELLOW.b * inv_progress + WORDLE_GREEN.b * progress),
+            255
+        };
+        
+        // Text colors transition
+        cross_text_color = (Color){
+            (unsigned char)(WORDLE_WHITE.r * inv_progress + WORDLE_GRAY.r * progress),
+            (unsigned char)(WORDLE_WHITE.g * inv_progress + WORDLE_GRAY.g * progress),
+            (unsigned char)(WORDLE_WHITE.b * inv_progress + WORDLE_GRAY.b * progress),
+            255
+        };
+        wordle_text_color = (Color){
+            (unsigned char)(WORDLE_GRAY.r * inv_progress + WORDLE_WHITE.r * progress),
+            (unsigned char)(WORDLE_GRAY.g * inv_progress + WORDLE_WHITE.g * progress),
+            (unsigned char)(WORDLE_GRAY.b * inv_progress + WORDLE_WHITE.b * progress),
+            255
+        };
+    }
+    
+    // Draw the animated tab background
+    Rectangle animated_tab_bg = {
+        animated_tab_x,
+        title_y - tab_padding,
+        animated_tab_width,
+        title_font_size + 2 * tab_padding
+    };
+    DrawRectangleRounded(animated_tab_bg, 0.3f, 6, animated_tab_color);
+    
+    // Draw the tab text with animated colors
+    DrawText("CROSS", title_x, title_y, title_font_size, cross_text_color);
+    DrawText(" ", title_x + cross_width, title_y, title_font_size, WORDLE_WHITE);
+    DrawText("WORDLE", title_x + cross_width + space_width, title_y, title_font_size, wordle_text_color);
     
     // Subtitle
     const char* subtitle = "Infinite Wordle + Crossword Puzzles";

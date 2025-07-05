@@ -26,6 +26,8 @@
 #define VIEW_TRANSITION_DURATION 0.5f        // Duration of view switching animation
 #define LETTER_EASE_DURATION 0.4f            // Duration of letter ease in/out animation
 #define LETTER_EASE_SCALE 1.1f               // Scale factor for letter ease animation
+#define HOME_TAB_ANIMATION_DURATION 1.0f     // Duration of home screen ping-pong tab animation (1 second)
+#define HOME_TAB_PAUSE_DURATION 1.0f         // Pause duration in each mode before animating (1 second)
 #define PARTICLE_LIFETIME 1.5f               // Lifetime of celebration particles
 #define PARTICLE_GRAVITY 200.0f              // Gravity applied to particles
 

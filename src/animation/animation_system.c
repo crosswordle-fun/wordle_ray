@@ -79,6 +79,30 @@ GameState animation_update_system(GameState state) {
         }
     }
     
+    // Update home screen ping-pong tab animation
+    if (state.current_view == VIEW_HOME_SCREEN) {
+        if (state.ui.home_tab_is_paused) {
+            // Currently in pause state
+            state.ui.home_tab_pause_timer += frame_time;
+            if (state.ui.home_tab_pause_timer >= HOME_TAB_PAUSE_DURATION) {
+                // Pause complete, start next animation
+                state.ui.home_tab_is_paused = 0;
+                state.ui.home_tab_pause_timer = 0.0f;
+                state.ui.home_tab_animation_timer = 0.0f;
+                state.ui.home_tab_animating_to_cross = !state.ui.home_tab_animating_to_cross;
+            }
+        } else {
+            // Currently animating
+            state.ui.home_tab_animation_timer += frame_time;
+            if (state.ui.home_tab_animation_timer >= HOME_TAB_ANIMATION_DURATION) {
+                // Animation complete, start pause
+                state.ui.home_tab_is_paused = 1;
+                state.ui.home_tab_animation_timer = HOME_TAB_ANIMATION_DURATION; // Keep at max for static display
+                state.ui.home_tab_pause_timer = 0.0f;
+            }
+        }
+    }
+    
     // Update particles
     update_particles(&state, frame_time);
     
