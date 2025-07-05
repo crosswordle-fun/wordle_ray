@@ -135,6 +135,12 @@ void render_animated_tab(GameState state) {
         };
     }
     
+    // Draw the full top bar background during transitions
+    int top_bar_height = title_y + title_font_size + 20;  // 20px bottom padding
+    Rectangle top_bar = {0, 0, screen_width, top_bar_height};
+    DrawRectangleRec(top_bar, WORDLE_BLACK);
+    DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
+    
     // Draw the animated tab background
     Rectangle animated_tab_bg = {
         animated_tab_x,
@@ -382,10 +388,12 @@ void ui_render_system(GameState state) {
     // Calculate top bar height (only title)
     int top_bar_height = title_y + title_font_size + 20;  // 20px bottom padding
     
-    // Draw full-width black top bar with white border
-    Rectangle top_bar = {0, 0, layout.screen_width, top_bar_height};
-    DrawRectangleRec(top_bar, WORDLE_BLACK);
-    DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
+    // Draw full-width black top bar with white border (skip during transitions)
+    if (!state.ui.transitioning_view) {
+        Rectangle top_bar = {0, 0, layout.screen_width, top_bar_height};
+        DrawRectangleRec(top_bar, WORDLE_BLACK);
+        DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
+    }
     
     // Draw main title with tab-style highlighting (skip during transitions)
     if (!state.ui.transitioning_view) {
@@ -678,10 +686,12 @@ void crossword_render_system(GameState state) {
     // Calculate top bar height (only title)
     int top_bar_height = title_y + title_font_size + 20;  // 20px bottom padding
     
-    // Draw full-width black top bar with white border
-    Rectangle top_bar = {0, 0, screen_width, top_bar_height};
-    DrawRectangleRec(top_bar, WORDLE_BLACK);
-    DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
+    // Draw full-width black top bar with white border (skip during transitions)
+    if (!state.ui.transitioning_view) {
+        Rectangle top_bar = {0, 0, screen_width, top_bar_height};
+        DrawRectangleRec(top_bar, WORDLE_BLACK);
+        DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
+    }
     
     // Draw main title with tab-style highlighting (skip during transitions)
     if (!state.ui.transitioning_view) {
