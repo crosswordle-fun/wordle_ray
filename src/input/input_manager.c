@@ -16,7 +16,6 @@ GameState input_system(GameState state) {
     state.system.up_arrow_pressed = IsKeyPressed(KEY_UP);
     state.system.down_arrow_pressed = IsKeyPressed(KEY_DOWN);
     state.system.tab_pressed = IsKeyPressed(KEY_TAB);
-    state.system.shift_pressed = IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT);
     
     state.system.frame_time = GetFrameTime();
     

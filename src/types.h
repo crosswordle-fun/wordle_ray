@@ -168,7 +168,6 @@ typedef struct {
     int user_has_scrolled;
     int auto_center_paused;
     int tab_pressed;
-    int shift_pressed;
 } SystemState;
 
 typedef struct {

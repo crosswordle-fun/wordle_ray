@@ -5,11 +5,6 @@ GameState crossword_input_system(GameState state) {
         return state;
     }
     
-    // Direction toggle with Shift key
-    if (state.system.shift_pressed) {
-        state.crossword.cursor_direction = !state.crossword.cursor_direction;
-    }
-    
     // Left/Right arrow keys cycle through words
     if (IsKeyPressed(KEY_LEFT)) {
         // Previous word (cycle backwards)
