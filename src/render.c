@@ -94,9 +94,9 @@ void render_animated_tab(GameState state) {
         
         // Text colors transition
         cross_text_color = (Color){
-            (unsigned char)(WORDLE_GRAY.r * inv_progress + WORDLE_BLACK.r * progress),
-            (unsigned char)(WORDLE_GRAY.g * inv_progress + WORDLE_BLACK.g * progress),
-            (unsigned char)(WORDLE_GRAY.b * inv_progress + WORDLE_BLACK.b * progress),
+            (unsigned char)(WORDLE_GRAY.r * inv_progress + WORDLE_WHITE.r * progress),
+            (unsigned char)(WORDLE_GRAY.g * inv_progress + WORDLE_WHITE.g * progress),
+            (unsigned char)(WORDLE_GRAY.b * inv_progress + WORDLE_WHITE.b * progress),
             255
         };
         wordle_text_color = (Color){
@@ -122,9 +122,9 @@ void render_animated_tab(GameState state) {
         
         // Text colors transition
         cross_text_color = (Color){
-            (unsigned char)(WORDLE_BLACK.r * inv_progress + WORDLE_GRAY.r * progress),
-            (unsigned char)(WORDLE_BLACK.g * inv_progress + WORDLE_GRAY.g * progress),
-            (unsigned char)(WORDLE_BLACK.b * inv_progress + WORDLE_GRAY.b * progress),
+            (unsigned char)(WORDLE_WHITE.r * inv_progress + WORDLE_GRAY.r * progress),
+            (unsigned char)(WORDLE_WHITE.g * inv_progress + WORDLE_GRAY.g * progress),
+            (unsigned char)(WORDLE_WHITE.b * inv_progress + WORDLE_GRAY.b * progress),
             255
         };
         wordle_text_color = (Color){
@@ -695,7 +695,7 @@ void crossword_render_system(GameState state) {
         };
         DrawRectangleRounded(cross_bg, 0.3f, 6, WORDLE_YELLOW);  // Yellow background for active tab
         
-        DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_BLACK);  // Active tab with black text (on yellow background)
+        DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_WHITE);  // Active tab with white text (on yellow background)
         current_x += cross_width;
         DrawText(" ", current_x, title_y, title_font_size, WORDLE_WHITE);
         current_x += space_width;
