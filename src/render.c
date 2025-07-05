@@ -271,8 +271,8 @@ void ui_render_system(GameState state) {
     int stats_x = (layout.screen_width - stats_width) / 2;
     int stats_y = (state.system.debug_mode) ? debug_y + debug_font_size + 8 : level_y + level_font_size + 8;
     
-    // Calculate top bar height
-    int top_bar_height = stats_y + stats_font_size + 20;  // 20px bottom padding
+    // Calculate top bar height (only title and level info)
+    int top_bar_height = level_y + level_font_size + 20;  // 20px bottom padding
     
     // Draw full-width black top bar with white border
     Rectangle top_bar = {0, 0, layout.screen_width, top_bar_height};
@@ -301,13 +301,34 @@ void ui_render_system(GameState state) {
     // Draw level info in separate row
     DrawText(level_info, level_x, level_y, level_font_size, WORDLE_WHITE);
     
+    // Debug and stats are now drawn in the stats bar above
+    
+    // Calculate stats bar dimensions and position
+    int stats_bar_y = top_bar_height + 10;  // 10px gap after title bar
+    int stats_content_height = stats_font_size;
+    if (state.system.debug_mode) {
+        stats_content_height += debug_font_size + 8;
+    }
+    int stats_bar_height = stats_content_height + 20;  // 20px total padding
+    
+    // Draw stats bar with black background and white border
+    Rectangle stats_bar = {0, stats_bar_y, layout.screen_width, stats_bar_height};
+    DrawRectangleRec(stats_bar, WORDLE_BLACK);
+    DrawRectangleLinesEx(stats_bar, 2, WORDLE_WHITE);
+    
+    // Draw stats content
+    int stats_content_y = stats_bar_y + 10;  // 10px top padding
     if (state.system.debug_mode) {
         int debug_width = MeasureText(debug_message, debug_font_size);
         int debug_x = (layout.screen_width - debug_width) / 2;
-        DrawText(debug_message, debug_x, debug_y, debug_font_size, WORDLE_YELLOW);  // Yellow
+        DrawText(debug_message, debug_x, stats_content_y, debug_font_size, WORDLE_YELLOW);
+        stats_content_y += debug_font_size + 8;
     }
     
-    DrawText(level_stats, stats_x, stats_y, stats_font_size, WORDLE_WHITE);
+    DrawText(level_stats, stats_x, stats_content_y, stats_font_size, WORDLE_WHITE);
+    
+    // Update top area height to include stats bar
+    int total_top_area_height = stats_bar_y + stats_bar_height;
     
     // Game state specific messages
     if (state.core.play_state == GAME_STATE_LEVEL_COMPLETE) {
@@ -332,12 +353,12 @@ void ui_render_system(GameState state) {
         DrawRectangleRec(completion_bar, WORDLE_BLACK);
         DrawRectangleLinesEx(completion_bar, 2, WORDLE_WHITE);
         
-        // Add gap between top bar and middle view
+        // Add gap between stats bar and middle view
         int top_gap_complete = 15;
         int bottom_gap_complete = 15;
         
-        // Draw full-width middle view border with gaps
-        Rectangle middle_view_border_complete = {0, top_bar_height + top_gap_complete, layout.screen_width, completion_bar_y - top_bar_height - top_gap_complete - bottom_gap_complete};
+        // Draw full-width middle view border with gaps (from stats bar to completion bar)
+        Rectangle middle_view_border_complete = {0, total_top_area_height + top_gap_complete, layout.screen_width, completion_bar_y - total_top_area_height - top_gap_complete - bottom_gap_complete};
         DrawRectangleLinesEx(middle_view_border_complete, 3, WORDLE_WHITE);  // 3px white border
         
         // Draw completion content
@@ -411,12 +432,12 @@ void ui_render_system(GameState state) {
         DrawRectangleRec(bottom_bar, WORDLE_BLACK);
         DrawRectangleLinesEx(bottom_bar, 2, WORDLE_WHITE);
         
-        // Add gap between top bar and middle view
+        // Add gap between stats bar and middle view
         int top_gap = 15;
         int bottom_gap = 15;
         
-        // Draw full-width middle view border with gaps
-        Rectangle middle_view_border = {0, top_bar_height + top_gap, layout.screen_width, bottom_bar_y - top_bar_height - top_gap - bottom_gap};
+        // Draw full-width middle view border with gaps (from stats bar to bottom bar)
+        Rectangle middle_view_border = {0, total_top_area_height + top_gap, layout.screen_width, bottom_bar_y - total_top_area_height - top_gap - bottom_gap};
         DrawRectangleLinesEx(middle_view_border, 3, WORDLE_WHITE);  // 3px white border
         
         // Draw bottom bar content with dark text
@@ -570,12 +591,45 @@ void crossword_render_system(GameState state) {
     // Draw level info in separate row
     DrawText(level_info, level_x, level_y, level_font_size, WORDLE_WHITE);
     
+    // Calculate crossword stats for separate stats bar
+    const char* direction_text = (state.crossword.cursor_direction == 0) ? "ACROSS" : "DOWN";
+    char word_indicator[50];
+    sprintf(word_indicator, "Word %d - %s", 
+            state.crossword.current_word_index + 1, 
+            direction_text);
+    
+    int word_font_size = (int)(screen_width * 0.030f);
+    if (word_font_size < 20) word_font_size = 20;
+    if (word_font_size > 28) word_font_size = 28;
+    
+    // Calculate stats bar dimensions and position
+    int stats_bar_y = top_bar_height + 10;  // 10px gap after title bar
+    int stats_bar_height = word_font_size + 20;  // 20px total padding
+    
+    // Draw stats bar with black background and white border
+    Rectangle stats_bar = {0, stats_bar_y, screen_width, stats_bar_height};
+    DrawRectangleRec(stats_bar, WORDLE_BLACK);
+    DrawRectangleLinesEx(stats_bar, 2, WORDLE_WHITE);
+    
+    // Draw word indicator in stats bar
+    int word_indicator_width = MeasureText(word_indicator, word_font_size);
+    int word_x = (screen_width - word_indicator_width) / 2;
+    int word_y = stats_bar_y + 10;  // 10px top padding
+    DrawText(word_indicator, word_x, word_y, word_font_size, WORDLE_YELLOW);
+    
+    // Update total top area height
+    int total_top_area_height = stats_bar_y + stats_bar_height;
+    
     // Calculate grid layout
     int grid_size = 9;
     int screen_height = GetScreenHeight();
     
-    // Calculate available space for grid (account for top bar and bottom margin)
-    int available_height = screen_height - top_bar_height - 100;  // 100px bottom margin
+    // Add gap considerations for grid positioning
+    int top_gap_for_grid = 15;
+    int bottom_gap_for_grid = 15;
+    
+    // Calculate available space for grid (account for total top area, gaps, and bottom margin)
+    int available_height = screen_height - total_top_area_height - top_gap_for_grid - bottom_gap_for_grid - 100;  // 100px bottom margin
     int available_width = screen_width - 100;  // 100px horizontal margin
     
     // Use the smaller dimension to ensure grid fits
@@ -587,7 +641,7 @@ void crossword_render_system(GameState state) {
     int grid_width = grid_size * cell_size;
     int grid_height = grid_size * cell_size;
     int grid_start_x = (screen_width - grid_width) / 2;
-    int grid_start_y = top_bar_height + (available_height - grid_height) / 2;
+    int grid_start_y = total_top_area_height + top_gap_for_grid + (available_height - grid_height) / 2;
     
     // Calculate approximate bottom bar height for middle border positioning
     int temp_inst_font_size = (int)(screen_width * 0.024f);
@@ -602,12 +656,8 @@ void crossword_render_system(GameState state) {
         temp_bottom_bar_height += temp_bag_font_size + 5;
     }
     
-    // Add gap between top bar and middle view for crossword grid positioning
-    int top_gap_grid = 15;
-    int bottom_gap_grid = 15;
-    
-    // Draw full-width middle view border with gaps
-    Rectangle middle_view_border = {0, top_bar_height + top_gap_grid, screen_width, screen_height - top_bar_height - temp_bottom_bar_height - top_gap_grid - bottom_gap_grid};
+    // Draw full-width middle view border with gaps (using consistent variables)
+    Rectangle middle_view_border = {0, total_top_area_height + top_gap_for_grid, screen_width, screen_height - total_top_area_height - temp_bottom_bar_height - top_gap_for_grid - bottom_gap_for_grid};
     DrawRectangleLinesEx(middle_view_border, 3, WORDLE_WHITE);  // 3px white border
     
     // Draw grid
@@ -746,21 +796,7 @@ void crossword_render_system(GameState state) {
     }
     
     
-    // Word and direction indicator - positioned below grid center
-    const char* direction_text = (state.crossword.cursor_direction == 0) ? "ACROSS" : "DOWN";
-    char word_indicator[50];
-    sprintf(word_indicator, "Word %d - %s", 
-            state.crossword.current_word_index + 1, 
-            direction_text);
-    
-    int word_font_size = (int)(screen_width * 0.030f);
-    if (word_font_size < 20) word_font_size = 20;
-    if (word_font_size > 28) word_font_size = 28;
-    
-    int word_indicator_width = MeasureText(word_indicator, word_font_size);
-    int word_x = (screen_width - word_indicator_width) / 2;  // Center horizontally
-    int word_y = grid_start_y + grid_height + 20;  // Below the grid
-    DrawText(word_indicator, word_x, word_y, word_font_size, (Color){200, 140, 0, 255});  // Dark yellow
+    // Word indicator is now drawn in the stats bar above
     
     // Calculate bottom bar content and dimensions
     const char* instructions = "Left/Right: select word | Up/Down: navigate within word | Letters: place letters | Enter: validate word | Tab: return to Wordle";
@@ -805,12 +841,12 @@ void crossword_render_system(GameState state) {
     DrawRectangleRec(bottom_bar, WORDLE_BLACK);
     DrawRectangleLinesEx(bottom_bar, 2, WORDLE_WHITE);
     
-    // Add gap between top bar and middle view for crossword
+    // Add gap between stats bar and middle view for crossword
     int top_gap_cross = 15;
     int bottom_gap_cross = 15;
     
-    // Draw full-width middle view border with gaps
-    Rectangle middle_view_border_cross = {0, top_bar_height + top_gap_cross, screen_width, bottom_bar_y - top_bar_height - top_gap_cross - bottom_gap_cross};
+    // Draw full-width middle view border with gaps (from stats bar)
+    Rectangle middle_view_border_cross = {0, total_top_area_height + top_gap_cross, screen_width, bottom_bar_y - total_top_area_height - top_gap_cross - bottom_gap_cross};
     DrawRectangleLinesEx(middle_view_border_cross, 3, WORDLE_WHITE);  // 3px white border
     
     // Draw bottom bar content with dark text
