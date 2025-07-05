@@ -387,24 +387,26 @@ void ui_render_system(GameState state) {
     DrawRectangleRec(top_bar, WORDLE_BLACK);
     DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
     
-    // Draw main title with tab-style highlighting
-    int current_x = title_x;
-    DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
-    current_x += cross_width;
-    DrawText(" ", current_x, title_y, title_font_size, WORDLE_WHITE);
-    current_x += space_width;
-    
-    // Draw rounded background for active "WORDLE" tab
-    int tab_padding = 8;
-    Rectangle wordle_bg = {
-        current_x - tab_padding,
-        title_y - tab_padding,
-        wordle_width + 2 * tab_padding,
-        title_font_size + 2 * tab_padding
-    };
-    DrawRectangleRounded(wordle_bg, 0.3f, 6, WORDLE_GREEN);  // Green background for active tab
-    
-    DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_WHITE);  // Active tab with white text
+    // Draw main title with tab-style highlighting (skip during transitions)
+    if (!state.ui.transitioning_view) {
+        int current_x = title_x;
+        DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
+        current_x += cross_width;
+        DrawText(" ", current_x, title_y, title_font_size, WORDLE_WHITE);
+        current_x += space_width;
+        
+        // Draw rounded background for active "WORDLE" tab
+        int tab_padding = 8;
+        Rectangle wordle_bg = {
+            current_x - tab_padding,
+            title_y - tab_padding,
+            wordle_width + 2 * tab_padding,
+            title_font_size + 2 * tab_padding
+        };
+        DrawRectangleRounded(wordle_bg, 0.3f, 6, WORDLE_GREEN);  // Green background for active tab
+        
+        DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_WHITE);  // Active tab with white text
+    }
     
     // Debug and stats are now drawn in the stats bar above
     
@@ -679,24 +681,26 @@ void crossword_render_system(GameState state) {
     DrawRectangleRec(top_bar, WORDLE_BLACK);
     DrawRectangleLinesEx(top_bar, 2, WORDLE_WHITE);
     
-    // Draw main title with tab-style highlighting
-    int current_x = title_x;
-    
-    // Draw rounded background for active "CROSS" tab
-    int tab_padding = 8;
-    Rectangle cross_bg = {
-        current_x - tab_padding,
-        title_y - tab_padding,
-        cross_width + 2 * tab_padding,
-        title_font_size + 2 * tab_padding
-    };
-    DrawRectangleRounded(cross_bg, 0.3f, 6, WORDLE_YELLOW);  // Yellow background for active tab
-    
-    DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_BLACK);  // Active tab with black text (on yellow background)
-    current_x += cross_width;
-    DrawText(" ", current_x, title_y, title_font_size, WORDLE_WHITE);
-    current_x += space_width;
-    DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
+    // Draw main title with tab-style highlighting (skip during transitions)
+    if (!state.ui.transitioning_view) {
+        int current_x = title_x;
+        
+        // Draw rounded background for active "CROSS" tab
+        int tab_padding = 8;
+        Rectangle cross_bg = {
+            current_x - tab_padding,
+            title_y - tab_padding,
+            cross_width + 2 * tab_padding,
+            title_font_size + 2 * tab_padding
+        };
+        DrawRectangleRounded(cross_bg, 0.3f, 6, WORDLE_YELLOW);  // Yellow background for active tab
+        
+        DrawText("CROSS", current_x, title_y, title_font_size, WORDLE_BLACK);  // Active tab with black text (on yellow background)
+        current_x += cross_width;
+        DrawText(" ", current_x, title_y, title_font_size, WORDLE_WHITE);
+        current_x += space_width;
+        DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
+    }
     
     // Calculate crossword stats for separate stats bar
     const char* direction_text = (state.crossword.cursor_direction == 0) ? "ACROSS" : "DOWN";
