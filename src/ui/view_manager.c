@@ -4,9 +4,8 @@ GameState view_switching_system(GameState state) {
     if (state.system.tab_pressed) {
         // Only allow tab switching between Wordle and Crossword modes
         if (state.current_view == VIEW_WORDLE || state.current_view == VIEW_CROSSWORD) {
-            // Allow interrupting transitions with new transitions (handle rapid tab presses)
-            if (!state.ui.transitioning_view || 
-                (state.ui.transitioning_view && state.ui.view_transition_timer > 0.1f)) {
+            // Only allow tab switching when no transition is in progress
+            if (!state.ui.transitioning_view) {
                 
                 // Initialize transition state
                 state.ui.transitioning_view = 1;
