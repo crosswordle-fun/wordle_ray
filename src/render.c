@@ -271,8 +271,8 @@ void ui_render_system(GameState state) {
     int stats_x = (layout.screen_width - stats_width) / 2;
     int stats_y = (state.system.debug_mode) ? debug_y + debug_font_size + 8 : level_y + level_font_size + 8;
     
-    // Calculate top bar height (only title and level info)
-    int top_bar_height = level_y + level_font_size + 20;  // 20px bottom padding
+    // Calculate top bar height (only title)
+    int top_bar_height = title_y + title_font_size + 20;  // 20px bottom padding
     
     // Draw full-width black top bar with white border
     Rectangle top_bar = {0, 0, layout.screen_width, top_bar_height};
@@ -298,14 +298,11 @@ void ui_render_system(GameState state) {
     
     DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_WHITE);  // Active tab with white text
     
-    // Draw level info in separate row
-    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_WHITE);
-    
     // Debug and stats are now drawn in the stats bar above
     
     // Calculate stats bar dimensions and position
     int stats_bar_y = top_bar_height + 10;  // 10px gap after title bar
-    int stats_content_height = stats_font_size;
+    int stats_content_height = level_font_size + 8 + stats_font_size;  // level + gap + stats
     if (state.system.debug_mode) {
         stats_content_height += debug_font_size + 8;
     }
@@ -316,8 +313,13 @@ void ui_render_system(GameState state) {
     DrawRectangleRec(stats_bar, WORDLE_BLACK);
     DrawRectangleLinesEx(stats_bar, 2, WORDLE_WHITE);
     
-    // Draw stats content
+    // Draw stats content (level info first, then debug, then level stats)
     int stats_content_y = stats_bar_y + 10;  // 10px top padding
+    
+    // Draw level info at top of stats bar
+    DrawText(level_info, level_x, stats_content_y, level_font_size, WORDLE_WHITE);
+    stats_content_y += level_font_size + 8;
+    
     if (state.system.debug_mode) {
         int debug_width = MeasureText(debug_message, debug_font_size);
         int debug_x = (layout.screen_width - debug_width) / 2;
@@ -561,8 +563,8 @@ void crossword_render_system(GameState state) {
     int level_x = (screen_width - level_width) / 2;
     int level_y = title_y + title_font_size + 10;
     
-    // Calculate top bar height
-    int top_bar_height = level_y + level_font_size + 20;  // 20px bottom padding
+    // Calculate top bar height (only title)
+    int top_bar_height = title_y + title_font_size + 20;  // 20px bottom padding
     
     // Draw full-width black top bar with white border
     Rectangle top_bar = {0, 0, screen_width, top_bar_height};
@@ -588,9 +590,6 @@ void crossword_render_system(GameState state) {
     current_x += space_width;
     DrawText("WORDLE", current_x, title_y, title_font_size, WORDLE_GRAY);  // Inactive tab
     
-    // Draw level info in separate row
-    DrawText(level_info, level_x, level_y, level_font_size, WORDLE_WHITE);
-    
     // Calculate crossword stats for separate stats bar
     const char* direction_text = (state.crossword.cursor_direction == 0) ? "ACROSS" : "DOWN";
     char word_indicator[50];
@@ -604,18 +603,24 @@ void crossword_render_system(GameState state) {
     
     // Calculate stats bar dimensions and position
     int stats_bar_y = top_bar_height + 10;  // 10px gap after title bar
-    int stats_bar_height = word_font_size + 20;  // 20px total padding
+    int stats_bar_height = level_font_size + 8 + word_font_size + 20;  // level + gap + word indicator + padding
     
     // Draw stats bar with black background and white border
     Rectangle stats_bar = {0, stats_bar_y, screen_width, stats_bar_height};
     DrawRectangleRec(stats_bar, WORDLE_BLACK);
     DrawRectangleLinesEx(stats_bar, 2, WORDLE_WHITE);
     
-    // Draw word indicator in stats bar
+    // Draw stats content (level info first, then word indicator)
+    int stats_content_y = stats_bar_y + 10;  // 10px top padding
+    
+    // Draw level info at top of stats bar
+    DrawText(level_info, level_x, stats_content_y, level_font_size, WORDLE_WHITE);
+    stats_content_y += level_font_size + 8;
+    
+    // Draw word indicator below level info
     int word_indicator_width = MeasureText(word_indicator, word_font_size);
     int word_x = (screen_width - word_indicator_width) / 2;
-    int word_y = stats_bar_y + 10;  // 10px top padding
-    DrawText(word_indicator, word_x, word_y, word_font_size, WORDLE_YELLOW);
+    DrawText(word_indicator, word_x, stats_content_y, word_font_size, WORDLE_YELLOW);
     
     // Update total top area height
     int total_top_area_height = stats_bar_y + stats_bar_height;
