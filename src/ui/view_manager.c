@@ -13,13 +13,13 @@ GameState view_switching_system(GameState state) {
                 state.ui.view_transition_timer = 0.0f;
                 state.ui.previous_view = state.current_view;
                 
-                // Set transition direction and target view
+                // Set transition direction and target view based on tab positions
                 if (state.current_view == VIEW_WORDLE) {
                     state.current_view = VIEW_CROSSWORD;
-                    state.ui.transition_direction = 0; // left-to-right (Wordle slides left, Crossword slides in from right)
+                    state.ui.transition_direction = 1; // right-to-left (WORDLE→CROSS: Wordle slides right, Cross slides in from left)
                 } else if (state.current_view == VIEW_CROSSWORD) {
                     state.current_view = VIEW_WORDLE;
-                    state.ui.transition_direction = 1; // right-to-left (Crossword slides left, Wordle slides in from right)
+                    state.ui.transition_direction = 0; // left-to-right (CROSS→WORDLE: Cross slides left, Wordle slides in from right)
                 }
             }
         }

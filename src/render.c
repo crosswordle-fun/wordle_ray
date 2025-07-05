@@ -1148,13 +1148,13 @@ void render_system(GameState state) {
         int previous_view_offset = 0;
         
         if (state.ui.transition_direction == 0) {
-            // Left-to-right: Wordle→Crossword (Wordle slides left, Crossword slides in from right)
+            // Left-to-right: CROSS→WORDLE (Cross slides left, Wordle slides in from right)
             current_view_offset = (int)(screen_width * (1.0f - progress));  // Incoming view slides in from right
             previous_view_offset = -(int)(screen_width * progress);          // Outgoing view slides left
         } else {
-            // Right-to-left: Crossword→Wordle (Crossword slides left, Wordle slides in from right)
-            current_view_offset = (int)(screen_width * (1.0f - progress));  // Incoming view slides in from right  
-            previous_view_offset = -(int)(screen_width * progress);          // Outgoing view slides left
+            // Right-to-left: WORDLE→CROSS (Wordle slides right, Cross slides in from left)
+            current_view_offset = -(int)(screen_width * (1.0f - progress)); // Incoming view slides in from left
+            previous_view_offset = (int)(screen_width * progress);           // Outgoing view slides right
         }
         
         // Render previous view with offset using translation matrix
