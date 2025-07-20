@@ -207,3 +207,11 @@ The project includes web build support via Emscripten:
 - Outputs `.html`, `.js`, and `.wasm` files for browser deployment
 - Uses `build_web/` directory for web-specific builds
 - Includes proper WASM and WebGL configurations
+
+### Web Build Commands
+```bash
+mkdir -p build_web
+cd build_web
+cmake -DPLATFORM=Web ..
+make
+```
